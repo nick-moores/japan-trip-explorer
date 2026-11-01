@@ -204,10 +204,40 @@ tr.tot td{border:0;padding-top:8px;font-weight:900}
 .mini-link{font-weight:700;font-size:.74rem;color:var(--sky);text-decoration:none;margin-left:4px;white-space:nowrap}
 .gclose{position:absolute;top:10px;right:10px;z-index:2;width:36px;height:36px;border-radius:50%;border:2px solid var(--ink);background:var(--card);color:var(--ink);font-size:1rem;cursor:pointer}
 @media (prefers-reduced-motion:reduce){.guide,.gcard{animation:none}}
+.tonight{margin-top:14px;display:grid;gap:4px;background:var(--bg);border:2px solid var(--ink);border-radius:16px;padding:10px 14px}
+.tonight .tl{font-size:.74rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.tonight b{font-size:1.02rem}.tonight small{color:var(--muted);font-weight:700}
+.swap{justify-self:start;margin-top:4px;border:2px solid var(--ink);background:var(--card);color:var(--ink);border-radius:999px;padding:5px 12px;font:700 .85rem var(--body);cursor:pointer}
+.swap:hover{background:var(--gold);color:#24304f}
+.askbtn{position:fixed;z-index:40;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));border:3px solid var(--ink);background:var(--torii);color:#fff;border-radius:999px;padding:10px 18px;font:700 1rem var(--body);box-shadow:4px 4px 0 var(--ink);cursor:pointer}
+.chat{position:fixed;z-index:45;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(380px,calc(100vw - 32px));height:min(540px,calc(100vh - 32px));display:flex;flex-direction:column;background:var(--card);color:var(--ink);border:3px solid var(--ink);border-radius:22px;box-shadow:6px 6px 0 var(--ink);overflow:hidden}
+.chat[hidden]{display:none}
+.chat header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:2px solid var(--line);font-family:var(--display);font-weight:400}
+.chat header button{border:2px solid var(--ink);background:var(--card);color:var(--ink);border-radius:50%;width:32px;height:32px;cursor:pointer}
+.chatlog{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.msg{max-width:88%;padding:8px 12px;border-radius:16px;line-height:1.45;font-size:.93rem}
+.msg.bot{background:var(--bg);align-self:flex-start;border-bottom-left-radius:4px}
+.msg.me{background:var(--ink);color:var(--card);align-self:flex-end;border-bottom-right-radius:4px}
+.msg .li{display:block}
+.chatsugs{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 8px}
+.chatsugs[hidden]{display:none}
+.chatsugs button{border:2px dashed var(--matcha);background:none;color:var(--ink);border-radius:999px;padding:4px 10px;font:700 .8rem var(--body);cursor:pointer;text-align:left}
+#chatform{display:flex;gap:6px;padding:10px;border-top:2px solid var(--line)}
+#chatq{flex:1;min-width:0;border:2px solid var(--ink);border-radius:999px;padding:8px 14px;font:500 16px var(--body);background:var(--bg);color:var(--ink)}
+#chatsend{border:2px solid var(--ink);background:var(--torii);color:#fff;border-radius:999px;padding:8px 14px;font:700 .9rem var(--body);cursor:pointer}
+#chatsend:disabled{opacity:.5}
+.focusing .askbtn,.focusing .chat{display:none}
 .credit{margin:-6px 0 12px;font-size:.7rem;color:var(--muted)}
 </style>
 
 <div id="guide" class="guide" hidden role="dialog" aria-modal="true" aria-label="Place guide"><div class="gcard"><button class="gclose" type="button" aria-label="Close">✕</button><div class="gbody"></div></div></div>
+<button id="askbtn" class="askbtn" type="button" aria-controls="chat" aria-expanded="false" hidden>💬 Ask about the trip</button>
+<section id="chat" class="chat" hidden aria-label="Trip chat">
+  <header><b>Ask about the trip</b><button id="chatx" type="button" aria-label="Close chat">✕</button></header>
+  <div id="chatlog" class="chatlog" aria-live="polite"><div class="msg bot">Hi! Ask me anything about the plan: where you're sleeping, what to eat, or whether a day is too much for the kids.</div></div>
+  <div id="chatsugs" class="chatsugs"><button type="button">Where are we staying the night of Fuji-Q?</button><button type="button">Is any day too long for the kids?</button><button type="button">Where should we eat near Nakano Broadway?</button></div>
+  <form id="chatform"><input id="chatq" type="text" autocomplete="off" placeholder="Ask a question…" aria-label="Your question"><button id="chatsend" type="submit">Send</button></form>
+</section>
 </head>
 <body>
 <div class="app">
@@ -793,6 +823,7 @@ function renderCard(){
     <button class="link" type="button" data-tab="plan">Change the plan and see costs →</button>`;return;}
   card.innerHTML=`<div class="kicker"><span class="where${d.rest?" restw":""}">${esc(d.where)}${d.rest?" · rest":""}</span>Day ${day} of ${last}</div><h2>${esc(d.t)}</h2>${strip([...new Set(d.legs.flatMap(l=>[l[0],l[1]]))])}
   <ul class="steps">${d.steps.map(s=>`<li><span class="ic">${s[0]}</span><p><b>${esc(s[1])}</b>${fill(s[2])}</p></li>`).join("")}</ul>
+  ${tonightHTML(d)}
   ${d.rides?`<div class="ride">${d.rides.map(r=>`<div><span>🎢 ${esc(r[0])}</span><small>${esc(r[1])}</small></div>`).join("")}</div>`:""}
   ${d.tips?`<div class="tips">${d.tips.map(t=>`<span class="tip">📌 ${esc(t)}</span>`).join("")}</div>`:""}`;
 }
@@ -851,14 +882,14 @@ document.getElementById("replay").onclick=()=>startDay(day);
 document.getElementById("mprev").onclick=()=>go(day-1);
 document.getElementById("mnext").onclick=()=>go(day+1);
 const app=document.querySelector(".app"),fsb=document.getElementById("fs");
-function setFocus(on){app.classList.toggle("focus",on);fsb.textContent=on?"✕":"⛶ Full screen";fsb.setAttribute("aria-label",on?"Exit full screen":"Full screen");fsb.title=on?"Exit full screen":"";}
+function setFocus(on){app.classList.toggle("focus",on);document.body.classList.toggle("focusing",on);fsb.textContent=on?"✕":"⛶ Full screen";fsb.setAttribute("aria-label",on?"Exit full screen":"Full screen");fsb.title=on?"Exit full screen":"";}
 fsb.onclick=async()=>{
   const on=!app.classList.contains("focus");
   if(on){setFocus(true);try{await document.documentElement.requestFullscreen?.();}catch(e){}}
   else{setFocus(false);try{if(document.fullscreenElement)await document.exitFullscreen();}catch(e){}}
 };
 document.addEventListener("fullscreenchange",()=>{if(!document.fullscreenElement)setFocus(false);});
-addEventListener("keydown",e=>{if(e.key==="Escape"){closeGuide();return;}if(!$("guide").hidden)return;if(e.key==="ArrowRight")go(day+1);if(e.key==="ArrowLeft")go(day-1);});
+addEventListener("keydown",e=>{if(e.target.closest&&e.target.closest("input,textarea"))return;if(e.key==="Escape"){closeGuide();return;}if(!$("guide").hidden)return;if(e.key==="ArrowRight")go(day+1);if(e.key==="ArrowLeft")go(day-1);});
 let sx=null;cv.addEventListener("pointerdown",e=>sx=e.clientX);
 cv.addEventListener("pointerup",e=>{if(sx!==null&&Math.abs(e.clientX-sx)>40)go(day+(e.clientX<sx?1:-1));sx=null;});
 
@@ -1068,6 +1099,62 @@ function openGuide(k){
   box.hidden=false;box.querySelector(".gclose").focus();
 }
 function closeGuide(){$("guide").hidden=true;}
+
+/* ---------- tonight + trip chat ---------- */
+function tonightName(d){
+  return{tokyo:HOTELS[cfg.hotel].name.replace(/^a family/,"Our family"),disney:DHOTELS[cfg.dhotel].name,nagoya:"A hotel by Nagoya Station",ryokan:"A lakeside ryokan at Lake Kawaguchi",
+    osaka:"A hotel in Osaka",sg:"Crowne Plaza Changi Airport",plane:"On the overnight flight home",home:"Home sweet home"}[d.night]||"";
+}
+function tonightHTML(d){
+  const name=tonightName(d);if(!name)return"";
+  const far=d.night==="tokyo"&&d.legs.some(l=>["F","N","O"].includes(reg(l[0]))||["F","N","O"].includes(reg(l[1])));
+  const back=far?(d.legs.some(l=>reg(l[0])==="F"||reg(l[1])==="F")?"Fuji Excursion train back to Tokyo, about 2 hours.":"Bullet train back to Tokyo, about 2 hours door to door."):"";
+  let sw="";
+  if(d.key===5)sw=d.night==="ryokan"?`<button type="button" class="swap" data-idea="kawaguchi">Come back to Tokyo instead</button>`:`<button type="button" class="swap" data-idea="kawaguchi">♨️ Stay near Fuji instead</button>`;
+  if(d.key===7&&!cfg.ideas.has("nagoya")&&!cfg.ideas.has("usj"))sw=d.night==="nagoya"?`<button type="button" class="swap" data-set="nagoya" data-val="0">Train back to Tokyo instead</button>`:`<button type="button" class="swap" data-set="nagoya" data-val="1">🏨 Stay in Nagoya instead</button>`;
+  return`<div class="tonight"><span class="tl">🛏️ Tonight</span><b>${esc(name)}</b>${back?`<small>${esc(back)}</small>`:""}${sw}</div>`;
+}
+function tripContext(){
+  const c=costOf(cfg,DAYS);
+  const days=DAYS.slice(1).map((d,i)=>`Day ${i+1} (${d.where}${d.rest?", rest day":""}): ${d.t}. ${d.steps.map(s=>s[1]+": "+s[2].replace("{hotel}",HOTELS[cfg.hotel].name).replace("{rooms}","")).join(" ")} Tonight: ${tonightName(d)}.`).join("\n");
+  const ideas=IDEAS.map(i=>`${i.title} (${i.where}; ${i.fit}; about $${i.lo}-${i.hi} for 5)${cfg.ideas.has(i.id)?" [IN THE TRIP]":""}`).join("; ");
+  return`TRIP PLAN (family of 5: 2 adults, 3 kids including a 10-year-old roller-coaster fan; flying Premium Economy from Southern California).
+Pace: ${PACES[cfg.pace].name}. Tokyo hotel: ${HOTELS[cfg.hotel].name}. Disney hotel: ${DHOTELS[cfg.dhotel].name}. Disney paid line skips: ${PA[cfg.pa].name}.
+Estimated total: $${Math.round(c.lo)}-$${Math.round(c.hi)} (budget $30-32k).
+${days}
+Optional ideas: ${ideas}
+The viewer is currently looking at ${day?`Day ${day}: ${DAYS[day].t}`:"the trip overview"}.`;
+}
+const CHAT={hist:[],busy:false,ctl:null,sample:null};
+(async()=>{try{
+  if(!window.claude||!window.claude.use)return;
+  const s=await window.claude.use("sample");if(!s)return;CHAT.sample=s;
+  $("askbtn").hidden=false;
+}catch(e){}})();
+function chatAdd(role,text){const el=document.createElement("div");el.className="msg "+role;el.innerHTML=fmtMsg(text);$("chatlog").appendChild(el);$("chatlog").scrollTop=1e9;return el;}
+function fmtMsg(t){return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^[-•] (.*)$/gm,"<span class='li'>• $1</span>").replace(/\n/g,"<br>");}
+async function ask(q){
+  q=q.trim();if(!q||CHAT.busy||!CHAT.sample)return;
+  CHAT.busy=true;$("chatq").value="";$("chatsend").disabled=true;$("chatsugs").hidden=true;
+  chatAdd("me",q);const out=chatAdd("bot","Thinking…");
+  const instr="You are a friendly, concise trip helper inside a family's Japan Trip Explorer. Answer from the plan below; when it's silent, give practical, kid-aware advice and say it's a suggestion. Keep answers under 120 words, plain text, short lines or '- ' bullets. Prices are estimates. If they ask to change the plan, say which tab or button does it (Plan, Disney, Ideas tabs, or the 'Tonight' switch on the day card).\n\n"+tripContext();
+  const msgs=[...CHAT.hist.slice(-6),{role:"user",content:instr+"\n\nQUESTION: "+q}];
+  CHAT.ctl=new AbortController();
+  try{
+    const r=await CHAT.sample(msgs,{cache:false,modelTier:"quick",signal:CHAT.ctl.signal,onText:({text})=>{out.innerHTML=fmtMsg(text);$("chatlog").scrollTop=1e9;}});
+    out.innerHTML=fmtMsg(r.text);CHAT.hist.push({role:"user",content:q},{role:"assistant",content:r.text});
+  }catch(e){
+    if(e&&e.code==="not_granted"){out.textContent="Chat needs permission to ask Claude. Allow it from this page's permissions to use chat.";}
+    else if(e&&e.code==="rate_limited"){out.textContent="Too many questions at once. Give it a minute and try again.";}
+    else out.textContent=(e&&e.text)||"That didn't go through. Try asking again.";
+  }
+  CHAT.busy=false;$("chatsend").disabled=false;$("chatq").focus();
+}
+function openChat(on){$("chat").hidden=!on;$("askbtn").setAttribute("aria-expanded",on);if(on){$("chatq").focus();}}
+$("askbtn").onclick=()=>openChat($("chat").hidden);
+$("chatx").onclick=()=>openChat(false);
+$("chatform").addEventListener("submit",e=>{e.preventDefault();ask($("chatq").value);});
+$("chatsugs").addEventListener("click",e=>{const b=e.target.closest("button");if(b)ask(b.textContent);});
 
 cam=dayCam(0);startDay(0,true);updateCost();if(!TM)requestAnimationFrame(frame);
 </script>
