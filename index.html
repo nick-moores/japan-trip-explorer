@@ -134,6 +134,21 @@ tr.tot td{border:0;padding-top:8px;font-weight:900}
 .if{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .add{border:2px solid var(--ink);background:var(--torii);color:#fff;border-radius:999px;padding:6px 14px;font:700 .88rem var(--body);cursor:pointer}
 .add[aria-pressed="true"]{background:var(--matcha)}
+.dsum{background:var(--bg);border:2px solid var(--ink);border-radius:16px;padding:10px 14px;display:grid;gap:2px}
+.dsum div{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;font-weight:900}
+.dsum b{font:400 1.25rem var(--display);color:var(--torii);font-variant-numeric:tabular-nums}
+.dsum small{color:var(--muted);font-weight:700}
+.dh{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.dh button{border:2px solid var(--line);background:var(--bg);color:var(--ink);border-radius:14px;padding:8px 10px;text-align:left;cursor:pointer;font-family:var(--body);display:grid;gap:2px}
+.dh button.on{border-color:var(--ink);background:var(--gold);color:#24304f}
+.dn{font-weight:900;font-size:.92rem}.dp{font-size:.8rem;font-weight:700;font-variant-numeric:tabular-nums}.de{font-size:.72rem;color:var(--muted)}
+.dh button.on .de{color:#4a4030}
+.rides{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.rides li{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dotted var(--line);padding-bottom:6px}
+.rides li div{display:grid;min-width:0}.rides li span{color:var(--muted);font-size:.86rem}
+.rides small{text-align:right;font-weight:700;color:var(--torii);white-space:nowrap;font-size:.78rem}
+#disney h3{font:400 1rem var(--display);margin:16px 0 8px}
+.tabs button{font-size:.84rem;padding:8px 4px}
 </style>
 
 </head>
@@ -154,7 +169,8 @@ tr.tot td{border:0;padding-top:8px;font-weight:900}
   <div class="panel">
     <div class="tabs" role="tablist">
       <button type="button" role="tab" id="t-days" data-tab="days" aria-selected="true">🗾 Days</button>
-      <button type="button" role="tab" id="t-plan" data-tab="plan" aria-selected="false">💴 Plan &amp; cost</button>
+      <button type="button" role="tab" id="t-plan" data-tab="plan" aria-selected="false">💴 Plan</button>
+      <button type="button" role="tab" id="t-disney" data-tab="disney" aria-selected="false">🏰 Disney</button>
       <button type="button" role="tab" id="t-ideas" data-tab="ideas" aria-selected="false">✨ Ideas</button>
     </div>
     <div id="v-days" class="view">
@@ -167,6 +183,7 @@ tr.tot td{border:0;padding-top:8px;font-weight:900}
     <div class="hint">Tap the arrows, the day bubbles, or swipe the map. Arrow keys work too.</div>
     </div>
     <div id="v-plan" class="view card" hidden><div id="plan"></div></div>
+    <div id="v-disney" class="view card" hidden><div id="disney"></div></div>
     <div id="v-ideas" class="view" hidden><p class="lead">Ideas you might not have on the list yet. Add one and it lands in the right day, with the map, day count and cost updating.</p><div id="ideas" class="ideas"></div></div>
   </div>
 </div>
@@ -193,6 +210,79 @@ const P={
  gardens:{n:"Gardens by the Bay",lon:103.864,lat:1.282}
 };
 const M={plane:"✈️",train:"🚃",bullet:"🚄",bus:"🚌",car:"🚕",walk:"🚶"};
+/* ---------- Disney ---------- */
+const YEN=157;
+const DHOTELS={
+ none:{name:"No Disney hotel",short:"Stay in Tokyo",lo:0,hi:0,tdl:false,tds:false,mode:"train",
+  vibe:"Ride the train out from your Tokyo hotel both days (about 30–40 minutes each way). Cheapest, and no hotel change."},
+ celebration:{name:"Tokyo Disney Celebration Hotel",short:"Celebration",lon:139.913,lat:35.646,yen:[25000,50000],tdl:true,tds:false,mode:"bus",
+  vibe:"The budget Disney hotel, about 20 minutes away by shuttle bus. Simple, cheerful rooms; Disneyland early entry on most days."},
+ toystory:{name:"Tokyo Disney Resort Toy Story Hotel",short:"Toy Story Hotel",lon:139.884,lat:35.633,yen:[35000,70000],tdl:true,tds:false,mode:"train",
+  vibe:"Opened 2022. The whole hotel feels like Andy's room, with giant toys in the courtyard. A huge hit with kids and the best value near the parks."},
+ ambassador:{name:"Disney Ambassador Hotel",short:"Ambassador",lon:139.881,lat:35.627,yen:[45000,90000],tdl:true,tds:false,mode:"walk",
+  vibe:"Art Deco hotel by Ikspiari with character dining at Chef Mickey. A 10-minute walk to DisneySea."},
+ tdlhotel:{name:"Tokyo Disneyland Hotel",short:"Disneyland Hotel",lon:139.881,lat:35.634,yen:[50000,110000],tdl:true,tds:false,mode:"walk",
+  vibe:"Victorian palace right at the Disneyland gate. Walk out of the lobby and into the park."},
+ miracosta:{name:"Tokyo DisneySea Hotel MiraCosta",short:"MiraCosta",lon:139.889,lat:35.627,yen:[60000,130000],tdl:false,tds:true,mode:"walk",
+  vibe:"Built inside DisneySea, with a private park entrance. Book a harbor-view room and watch the night show from your window."},
+ fantasy:{name:"Fantasy Springs Hotel (Fantasy Chateau)",short:"Fantasy Springs",lon:139.887,lat:35.623,yen:[60000,140000],tdl:false,tds:true,mode:"walk",
+  vibe:"The newest and most luxurious, attached to Fantasy Springs (Frozen, Tangled, Peter Pan) with its own entrance."}
+};
+Object.values(DHOTELS).forEach(h=>{if(h.yen){h.lo=Math.round(2*h.yen[0]/YEN/10)*10;h.hi=Math.round(2*h.yen[1]/YEN/10)*10;}});
+const TIX=[Math.round(2*(2*7900+3*4700)/YEN/10)*10,Math.round(2*(2*10900+3*5600)/YEN/10)*10];
+const PA={
+ none:{name:"No paid passes",sub:"Standby lines only",tdl:[],tds:[]},
+ must:{name:"Must-dos",sub:"4 rides",tdl:[["Enchanted Tale of Beauty and the Beast",2500],["Pooh's Hunny Hunt",1500]],tds:[["Soaring: Fantastic Flight",2500],["Anna and Elsa's Frozen Journey",2500]]},
+ big:{name:"Go big",sub:"9 rides",tdl:[["Enchanted Tale of Beauty and the Beast",2500],["Big Thunder Mountain",1500],["Splash Mountain",1500],["The Happy Ride with Baymax",1500]],
+   tds:[["Soaring: Fantastic Flight",2500],["Anna and Elsa's Frozen Journey",2500],["Peter Pan's Never Land Adventure",2000],["Journey to the Center of the Earth",2000],["Toy Story Mania!",2000]]}
+};
+const paYen=k=>[...PA[k].tdl,...PA[k].tds].reduce((a,r)=>a+r[1],0)*5;
+const DRIDES={
+ tdl:[["Enchanted Tale of Beauty and the Beast","Trackless ride through the whole film. The park's #1 wait.","No minimum","¥2,500"],
+  ["Big Thunder Mountain","Runaway mine train. A great warm-up coaster.","102 cm","¥1,500"],
+  ["Splash Mountain","Still open here, with the big final drop. You will get wet.","90 cm","¥1,500"],
+  ["Pooh's Hunny Hunt","Honey pots bounce around on their own. Only in Tokyo.","No minimum","¥1,500"],
+  ["Monsters, Inc. Ride & Go Seek!","Flashlight tag through Monstropolis.","No minimum","¥1,000"],
+  ["The Happy Ride with Baymax","Spinning, music-blasting ride the kids will love.","81 cm","¥1,500"],
+  ["Electrical Parade Dreamlights","The nighttime parade. Grab a curb spot 30–45 minutes early.","Free",""]],
+ tds:[["Journey to the Center of the Earth","Drill down into a volcano and burst out the side. A signature ride.","117 cm","¥2,000"],
+  ["Soaring: Fantastic Flight","Hang-glide over world landmarks. Stunning.","102 cm","¥2,500"],
+  ["Raging Spirits","A short, punchy coaster with a 360° loop. Perfect for your coaster kid.","117 cm","¥1,500"],
+  ["Indiana Jones Adventure","Bumpy jeep ride through a temple, with the rolling boulder.","117 cm","¥1,500"],
+  ["Tower of Terror","A different story from the US version, with the same drops.","102 cm","¥1,500"],
+  ["Fantasy Springs","Frozen, Tangled and Peter Pan lands. Peter Pan's 3D flight is excellent.","No minimum","¥2,000–2,500"],
+  ["Believe! Sea of Dreams","The nighttime harbor show. Watch from the Mediterranean Harbor.","Free",""]]
+};
+const DTIPS=[
+ ["🎟️","Tickets are date-specific with variable pricing. Weekdays outside Japanese holidays are cheapest and least crowded."],
+ ["📱","Use the Tokyo Disney Resort app. Premier Access is bought in the app once you're inside the park, ride by ride, and popular ones sell out by midday."],
+ ["🚫","The free Priority Pass ended in 2026. Line skips are paid now, so pick the few rides that matter most."],
+ ["🌅","Rope-drop the big ride you aren't paying for, such as Raging Spirits or Big Thunder, in the first 30 minutes."],
+ ["🍿","Popcorn flavors differ by cart (curry, soy sauce and butter, honey, milk tea). Buy a souvenir bucket and refill it."],
+ ["🚀","A brand-new Space Mountain opens at Disneyland in 2027, and the Sugar Rush ride opens April 15, 2027. Check what's open for your dates."],
+ ["🧳","Changing hotels? Send big bags ahead with Japan's luggage forwarding (takkyubin, about $15–25 a bag) from either front desk."]
+];
+function renderDisney(){
+  const D=DHOTELS[cfg.dhotel],paK=cfg.pa,pa=paYen(paK)/YEN;
+  const hotelCost=D.lo?`${fmt(D.lo*cfg.dnights)}–${fmt(D.hi*cfg.dnights).slice(1)}`:"$0";
+  const dTot=[TIX[0]+pa*0.97+(D.lo*cfg.dnights),TIX[1]+pa*1.03+(D.hi*cfg.dnights)];
+  $("disney").innerHTML=`
+  <div class="dsum"><div><span>Disney for 5, 2 days</span><b>${fmt(dTot[0])}–${fmt(dTot[1]).slice(1)}</b></div>
+   <small>Tickets ${fmt(TIX[0])}–${fmt(TIX[1]).slice(1)} · Line skips ${fmt(pa)} · Disney hotel ${hotelCost}</small></div>
+  <h3>Stay at Disney?</h3>
+  <div class="dh">${Object.entries(DHOTELS).map(([k,h])=>`<button type="button" data-set="dhotel" data-val="${k}" class="${k===cfg.dhotel?"on":""}" aria-pressed="${k===cfg.dhotel}">
+    <span class="dn">${esc(h.short)}</span><span class="dp">${h.lo?`${fmt(h.lo)}–${fmt(h.hi).slice(1)}/night`:"Included in Tokyo hotel"}</span>
+    ${h.lo?`<span class="de">${h.tdl?"✓":"✗"} Disneyland early entry · ${h.tds?"✓":"✗"} DisneySea early entry</span>`:""}</button>`).join("")}</div>
+  <p class="note">${esc(D.vibe)}${D.lo?" Prices assume 2 rooms for 5 people; a few room types sleep 5, so check when booking.":""}</p>
+  ${D.lo?`<h3>Disney nights</h3>${seg("dnights",[[2,"2 nights","Check in the night before, out after DisneySea"],[3,"3 nights","Stay after DisneySea too, no late train"]],cfg.dnights)}
+  <p class="note">Early entry doesn't work on check-in day, so check in the evening before Disneyland.</p>`:""}
+  <h3>Paid line skips (Premier Access)</h3>${seg("pa",Object.entries(PA).map(([k,p])=>[k,p.name,`${p.sub} · ${fmt(paYen(k)/YEN)} for 5`]),paK)}
+  ${PA[paK].tdl.length?`<p class="note">Disneyland: ${PA[paK].tdl.map(r=>esc(r[0])).join(", ")}. DisneySea: ${PA[paK].tds.map(r=>esc(r[0])).join(", ")}.</p>`:""}
+  ${[["tdl","🏰 Tokyo Disneyland picks"],["tds","⚓ Tokyo DisneySea picks"]].map(([k,h])=>`<h3>${h}</h3><ul class="rides">${DRIDES[k].map(r=>`<li><div><b>${esc(r[0])}</b><span>${esc(r[1])}</span></div><small>${esc(r[2])}${r[3]?`<br>${esc(r[3])}`:""}</small></li>`).join("")}</ul>`).join("")}
+  <p class="note">Right column: minimum height, then Premier Access price per person. Heights change sometimes; check the app.</p>
+  <h3>Good to know</h3><ul class="steps">${DTIPS.map(t=>`<li><span class="ic">${t[0]}</span><p>${esc(t[1])}</p></li>`).join("")}</ul>
+  <p class="note">Hotel rates are planning ranges from Disney Park Nerds, converted at about ¥${YEN} to $1. Tickets assume 2 adults and 3 kids aged 4–11.</p>`;
+}
 /* ---------- trip planner model ---------- */
 Object.assign(P,{
  tower:{n:"Shiba Park & Tokyo Tower",lon:139.7454,lat:35.6586},
@@ -222,7 +312,7 @@ const HOTELS={
  apt:{name:"a family apartment",short:"Family apartment",area:"Shinjuku",lon:139.703,lat:35.692,lo:220,hi:380,rooms:"One apartment that sleeps five, with a washer.",note:"Cheapest and roomiest, with laundry and a kitchen. No pool, concierge or room service."}
 };
 const NIGHT={nagoya:[220,320],ryokan:[600,950],osaka:[280,420],sg:[225,300]};
-const NIGHTPLACE={tokyo:"okura",nagoya:"nagoyaH",ryokan:"ryokan",osaka:"osakaH",sg:"changi"};
+const NIGHTPLACE={disney:"dhotel",tokyo:"okura",nagoya:"nagoyaH",ryokan:"ryokan",osaka:"osakaH",sg:"changi"};
 const REGION={nagoya:"N",nagoyaH:"N",spa:"N",scmaglev:"N",ghibliP:"N",shinosaka:"O",osakaH:"O",usj:"O",fujiq:"F",ryokan:"F",chureito:"F",oshino:"F",changi:"S",gardens:"S",zoo:"S",home:"H",hnd:"T"};
 const HUB={T:"tokyost",N:"nagoya",O:"shinosaka",F:"fujiq"};
 const reg=k=>REGION[k]||"T";
@@ -233,9 +323,9 @@ const BASE={
  2:{t:"Anime, gaming & Pokémon",where:"Tokyo",night:"tokyo",legs:[["okura","ikeb","train"],["ikeb","akiba","train"]],
   steps:[["⚡","Morning","Pokémon Center Mega Tokyo and Pikachu Sweets in Sunshine City, Ikebukuro."],["🕹️","Afternoon","Akihabara: retro arcades, anime merch, Radio Kaikan and Mandarake."]]},
  3:{t:"Tokyo Disneyland",where:"Tokyo Bay",night:"tokyo",legs:[["okura","tdl","train"]],
-  steps:[["🏰","All day","The classic castle park, parades and favorite rides."],["🌹","Must do","Enchanted Tale of Beauty and the Beast. Use priority passes for it."]],tips:["Buy park tickets 2–3 months out","Get the Disney app"]},
+  steps:[["🏰","All day","The classic castle park, parades and favorite rides."],["🌹","Must do","Enchanted Tale of Beauty and the Beast, Pooh's Hunny Hunt and Big Thunder Mountain."],["✨","Evening","Electrical Parade Dreamlights. Grab a curb spot early."]],tips:["Buy park tickets 2–3 months out","Premier Access in the app"]},
  4:{t:"Tokyo DisneySea",where:"Tokyo Bay",night:"tokyo",legs:[["okura","tds","train"]],
-  steps:[["⚓","All day","A nautical Disney park found nowhere else in the world."],["🌋","Rides","Journey to the Center of the Earth, Tower of Terror and the Fantasy Springs area."],["🎆","Evening","Harbor show on the water before heading back."]]},
+  steps:[["⚓","All day","A nautical Disney park found nowhere else in the world."],["🌋","Rides","Journey to the Center of the Earth, Raging Spirits (with a loop!), Soaring and Fantasy Springs."],["🎆","Evening","Believe! Sea of Dreams, the harbor show on the water."]],tips:["See the Disney tab for picks"]},
  5:{t:"Fuji-Q Highland thrill day",where:"Mt. Fuji",night:"tokyo",legs:[["okura","shinjuku","train"],["shinjuku","fujiq","train"]],
   steps:[["🚃","Early start","Fuji Excursion limited express from Shinjuku, about 2 hours, right to the park."],["🎢","The big three","Fujiyama (79 m tall, 130 km/h), Takabisha (121° drop) and Eejanaika (14 flips!)."],["🗻","Bonus","Mt. Fuji views from the top of Fujiyama's lift hill."]],
   rides:[["Fujiyama","79 m · 130 km/h"],["Takabisha","121° beyond-vertical drop"],["Eejanaika","14 inversions, spinning seats"]],tips:["Zekkyo Priority passes, 1 month out","Reserve Fuji Excursion seats"]},
@@ -282,12 +372,12 @@ const IDEAS=[
   why:"An easy day trip to the 13 m Great Buddha you can step inside, then a seaside island with caves, tide pools and the old Enoden train along the beach.",tip:"Go on a weekday to skip crowds"}
 ];
 
-const cfg={pace:"bal",hotel:"okura",nagoya:false,sg:1,ideas:new Set()};
+const cfg={pace:"bal",hotel:"okura",nagoya:false,sg:1,dhotel:"none",dnights:2,pa:"must",ideas:new Set()};
 try{const s=JSON.parse(localStorage.getItem("jte-cfg")||"null");if(s){Object.assign(cfg,s);cfg.ideas=new Set(s.ideas||[]);}}catch(e){}
 const saveCfg=()=>{try{localStorage.setItem("jte-cfg",JSON.stringify({...cfg,ideas:[...cfg.ideas]}));}catch(e){}};
 const PACES={go:{name:"Go-go",sub:"No rest days",seq:[1,2,3,4,5,6,7,8,9,10,11]},
- bal:{name:"Balanced",sub:"A rest day after Disney and after Nagashima",seq:[1,2,3,4,"R",5,6,7,"R",8,9,10,11]},
- easy:{name:"Easy-going",sub:"Jet-lag day plus three rest days",seq:[1,"J",2,3,"R",4,5,"R",6,7,"R",8,9,10,11]}};
+ bal:{name:"Balanced",sub:"Disney days back to back, then a rest day; another rest day after Nagashima",seq:[1,2,3,4,"R",5,6,7,"R",8,9,10,11]},
+ easy:{name:"Easy-going",sub:"Jet-lag day plus three rest days",seq:[1,"J",2,3,4,"R",5,"R",6,7,"R",8,9,10,11]}};
 
 function clone(o){return JSON.parse(JSON.stringify(o));}
 function transfer(a,b){
@@ -327,6 +417,12 @@ function build(c){
   if(c.sg===2)ins(9,{...clone(BASE.S),key:"S"});
   if(c.ideas.has("kamakura"))ins(8,{key:"kama",t:"Kamakura & Enoshima",where:"Kanagawa",night:"tokyo",legs:[["okura","kamakura","train"],["kamakura","enoshima","train"]],
     steps:[["🧘","Morning","The Great Buddha of Kamakura. You can step inside him."],["🏝️","Afternoon","Ride the little Enoden train to Enoshima for caves and tide pools."]]});
+  if(c.dhotel&&c.dhotel!=="none"){const D=DHOTELS[c.dhotel],i3=at(3),i4=at(4);
+    days[i3-1].night="disney";days[i3-1].steps.push(["🏨","Evening",`Move to ${D.name} for the Disney days. Forward big bags ahead.`]);
+    days[i3].night="disney";days[i3].legs=[["dhotel","tdl",D.mode]];days[i4].legs=[["dhotel","tds",D.mode]];
+    if(D.tdl)days[i3].steps.unshift(["⏰","Early entry","Hotel guests get in about 15 minutes early. Go straight to Beauty and the Beast or Big Thunder."]);
+    if(D.tds)days[i4].steps.unshift(["⏰","Early entry","Hotel guests get in early through the hotel entrance. Head for Fantasy Springs first."]);
+    if(c.dnights===3){days[i4].night="disney";days[i4].steps.push(["🛏️","Night","Walk back to the hotel after the show. No late train."]);}}
   // wire up transfers so each day starts where the previous night ended
   let prev="home";
   days.forEach((d,i)=>{
@@ -339,7 +435,7 @@ function build(c){
   return [{t:"Our big family adventure",where:"Overview",legs:[],overview:1},...days];
 }
 function costOf(c,days){
-  const H=HOTELS[c.hotel],trip=days.slice(1);const n={tokyo:0,nagoya:0,ryokan:0,osaka:0,sg:0};
+  const H=HOTELS[c.hotel],trip=days.slice(1);const n={disney:0,tokyo:0,nagoya:0,ryokan:0,osaka:0,sg:0};
   trip.forEach(d=>{if(n[d.night]!==undefined)n[d.night]++;});
   const ideas=IDEAS.filter(i=>c.ideas.has(i.id));
   const L=[
@@ -350,14 +446,17 @@ function costOf(c,days){
   if(n.osaka)L.push([`Osaka hotel, ${n.osaka} night`,n.osaka*NIGHT.osaka[0],n.osaka*NIGHT.osaka[1]]);
   if(n.ryokan)L.push(["Lakeside ryokan with dinner",n.ryokan*NIGHT.ryokan[0],n.ryokan*NIGHT.ryokan[1]]);
   L.push([`Singapore hotel, ${n.sg} night${n.sg>1?"s":""}`,n.sg*NIGHT.sg[0],n.sg*NIGHT.sg[1]]);
-  L.push(["Theme parks & priority passes",2000,2500]);
+  if(n.disney){const D=DHOTELS[c.dhotel];L.push([`${D.short}, ${n.disney} nights`,n.disney*D.lo,n.disney*D.hi]);L.push(["Luggage forwarding",60,100]);}
+  L.push(["Disney tickets, 2 days",TIX[0],TIX[1]]);
+  {const pa=paYen(c.pa||"must")/YEN;if(pa)L.push([`Disney Premier Access (${PA[c.pa||"must"].name.toLowerCase()})`,pa*0.97,pa*1.03]);}
+  L.push(["Fuji-Q, Spa Land & Singapore tickets",1300,1700]);
   L.push(["Bullet trains & transit",1000,1200]);
   if(ideas.length)L.push([`Extras: ${ideas.map(i=>i.title.split(" (")[0]).join(", ")}`,ideas.reduce((a,i)=>a+i.lo,0),ideas.reduce((a,i)=>a+i.hi,0)]);
   L.push([`Food, Pokémon & souvenirs, ${trip.length} days`,trip.length*273,trip.length*318]);
   const lo=L.reduce((a,r)=>a+r[1],0),hi=L.reduce((a,r)=>a+r[2],0);
   return{L,lo,hi,mid:(lo+hi)/2,days:trip.length,rest:trip.filter(d=>d.rest).length,n};
 }
-function applyHotel(){const H=HOTELS[cfg.hotel];Object.assign(P.okura,{n:H.name.replace(/^a /,"Our "),lon:H.lon,lat:H.lat});}
+function applyHotel(){const DH=DHOTELS[cfg.dhotel]||DHOTELS.none;P.dhotel=Object.assign(P.dhotel||{hotel:1},{n:DH.name,lon:DH.lon||139.88,lat:DH.lat||35.63});const H=HOTELS[cfg.hotel];Object.assign(P.okura,{n:H.name.replace(/^a /,"Our "),lon:H.lon,lat:H.lat});}
 applyHotel();
 let DAYS=build(cfg);
 
@@ -656,6 +755,7 @@ function renderPlan(c){
   $("ideas").innerHTML=IDEAS.map(i=>{const on=cfg.ideas.has(i.id);return`<article class="idea${on?" on":""}"><div class="ih"><h4>${esc(i.title)}</h4><span class="fit">${esc(i.fit)}</span></div>
    <div class="iw">${esc(i.where)} · about ${fmt(i.lo)}–${fmt(i.hi).slice(1)} for 5</div><p>${esc(i.why)}</p><div class="if"><span class="tip">📌 ${esc(i.tip)}</span>
    <button type="button" class="add" data-idea="${i.id}" aria-pressed="${on}">${on?"✓ In the trip":"＋ Add to trip"}</button></div></article>`;}).join("");
+  renderDisney();
 }
 function rebuild(keepKey){
   const cur=DAYS[day]&&DAYS[day].t;applyHotel();DAYS=build(cfg);makeDots();saveCfg();
@@ -669,12 +769,13 @@ document.addEventListener("click",e=>{
     else if(k==="hotel")cfg.hotel=v;
     else if(k==="nagoya"){cfg.nagoya=v==="1";if(!cfg.nagoya)cfg.ideas.delete("nagoya");}
     else if(k==="sg")cfg.sg=+v;
+    else if(k==="dhotel")cfg.dhotel=v;else if(k==="dnights")cfg.dnights=+v;else if(k==="pa")cfg.pa=v;
     rebuild();return;}
   const a=e.target.closest("[data-idea]");
   if(a){const id=a.dataset.idea;cfg.ideas.has(id)?cfg.ideas.delete(id):cfg.ideas.add(id);rebuild();return;}
   const t=e.target.closest("[data-tab]");if(t)showTab(t.dataset.tab);
 });
-function showTab(n){["days","plan","ideas"].forEach(k=>{$("v-"+k).hidden=k!==n;$("t-"+k).setAttribute("aria-selected",k===n);});
+function showTab(n){["days","plan","disney","ideas"].forEach(k=>{$("v-"+k).hidden=k!==n;$("t-"+k).setAttribute("aria-selected",k===n);});
   if(n!=="days")$("v-"+n).scrollTop=0;}
 $("cost").onclick=()=>{if(document.querySelector(".app").classList.contains("focus"))$("fs").click();showTab("plan");};
 makeDots();
