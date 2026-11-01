@@ -1126,7 +1126,18 @@ Optional ideas: ${ideas}
 The viewer is currently looking at ${day?`Day ${day}: ${DAYS[day].t}`:"the trip overview"}.`;
 }
 const CHAT={hist:[],busy:false,ctl:null,sample:null};
+function loadCode(){try{return localStorage.getItem("jte-code")||"";}catch(e){return"";}}
+function saveCode(c){try{localStorage.setItem("jte-code",c);}catch(e){}}
 (async()=>{try{
+  if(window.TILES){
+    const st=await fetch("/api/chat").then(r=>r.ok?r.json():null).catch(()=>null);if(!st||!st.ready)return;
+    CHAT.needsCode=st.needsCode;
+    CHAT.sample=async(msgs,opts)=>{
+      const r=await fetch("/api/chat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({messages:msgs,code:loadCode()}),signal:opts&&opts.signal});
+      const j=await r.json().catch(()=>({}));if(!r.ok)throw{code:j.code||"error",message:j.error,text:j.error};
+      return{text:j.text};};
+    $("askbtn").hidden=false;return;
+  }
   if(!window.claude||!window.claude.use)return;
   const s=await window.claude.use("sample");if(!s)return;CHAT.sample=s;
   $("askbtn").hidden=false;
@@ -1135,6 +1146,7 @@ function chatAdd(role,text){const el=document.createElement("div");el.className=
 function fmtMsg(t){return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^[-•] (.*)$/gm,"<span class='li'>• $1</span>").replace(/\n/g,"<br>");}
 async function ask(q){
   q=q.trim();if(!q||CHAT.busy||!CHAT.sample)return;
+  if(CHAT.awaitCode){CHAT.awaitCode=false;saveCode(q);$("chatq").value="";$("chatq").type="text";chatAdd("bot","Thanks! Now ask me again.");if(CHAT.lastQ){const lq=CHAT.lastQ;CHAT.lastQ=null;return ask(lq);}return;}
   CHAT.busy=true;$("chatq").value="";$("chatsend").disabled=true;$("chatsugs").hidden=true;
   chatAdd("me",q);const out=chatAdd("bot","Thinking…");
   const instr="You are a friendly, concise trip helper inside a family's Japan Trip Explorer. Answer from the plan below; when it's silent, give practical, kid-aware advice and say it's a suggestion. Keep answers under 120 words, plain text, short lines or '- ' bullets. Prices are estimates. If they ask to change the plan, say which tab or button does it (Plan, Disney, Ideas tabs, or the 'Tonight' switch on the day card).\n\n"+tripContext();
@@ -1144,6 +1156,7 @@ async function ask(q){
     const r=await CHAT.sample(msgs,{cache:false,modelTier:"quick",signal:CHAT.ctl.signal,onText:({text})=>{out.innerHTML=fmtMsg(text);$("chatlog").scrollTop=1e9;}});
     out.innerHTML=fmtMsg(r.text);CHAT.hist.push({role:"user",content:q},{role:"assistant",content:r.text});
   }catch(e){
+    if(e&&e.code==="need_code"){out.textContent="This chat needs the family code. Type it below and press Send.";CHAT.awaitCode=true;CHAT.lastQ=q;$("chatq").type="password";CHAT.busy=false;$("chatsend").disabled=false;$("chatq").focus();return;}
     if(e&&e.code==="not_granted"){out.textContent="Chat needs permission to ask Claude. Allow it from this page's permissions to use chat.";}
     else if(e&&e.code==="rate_limited"){out.textContent="Too many questions at once. Give it a minute and try again.";}
     else out.textContent=(e&&e.text)||"That didn't go through. Try asking again.";
