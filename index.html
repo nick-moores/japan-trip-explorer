@@ -198,6 +198,10 @@ tr.tot td{border:0;padding-top:8px;font-weight:900}
 .gtip{margin:14px 0 0;font-weight:700}
 .gnote{margin:10px 0 0;font-size:.78rem;color:var(--muted)}
 .gcred{display:block;margin-top:8px;font-size:.72rem;color:var(--muted)}
+.glinks{display:flex;flex-wrap:wrap;gap:6px}
+.glinks a{border:2px solid var(--ink);border-radius:999px;padding:5px 11px;font-weight:700;font-size:.85rem;color:var(--ink);text-decoration:none;background:var(--bg)}
+.glinks a:hover{background:var(--gold);color:#24304f}
+.mini-link{font-weight:700;font-size:.74rem;color:var(--sky);text-decoration:none;margin-left:4px;white-space:nowrap}
 .gclose{position:absolute;top:10px;right:10px;z-index:2;width:36px;height:36px;border-radius:50%;border:2px solid var(--ink);background:var(--card);color:var(--ink);font-size:1rem;cursor:pointer}
 @media (prefers-reduced-motion:reduce){.guide,.gcard{animation:none}}
 .credit{margin:-6px 0 12px;font-size:.7rem;color:var(--muted)}
@@ -1035,11 +1039,30 @@ const GUIDE={
   eat:[["Ah Meng Restaurant","Local dishes inside the zoo"],["KFC & food court","Easy fallbacks"]],tip:"Go early. It gets hot by noon."}
 };
 function guideFor(k){if(k==="okura")return GUIDE[cfg.hotel];return GUIDE[k]||null;}
+const OFFICIAL={okura:"https://theokuratokyo.jp/en/",tdl:"https://www.tokyodisneyresort.jp/en/tdl/",tds:"https://www.tokyodisneyresort.jp/en/tds/",dhotel:"https://www.tokyodisneyresort.jp/en/hotel/",
+ fujiq:"https://www.fujiq.jp/en/",teamlab:"https://www.teamlab.art/e/planets/",mitaka:"https://www.ghibli-museum.jp/en/",ghibliP:"https://ghibli-park.jp/en/",
+ scmaglev:"https://museum.jr-central.co.jp/en/",usj:"https://www.usj.co.jp/web/en/us",shibuya:"https://www.shibuya-scramble-square.com/sky/",
+ gardens:"https://www.gardensbythebay.com.sg/",changi:"https://www.jewelchangiairport.com/",zoo:"https://www.mandai.com/en/singapore-zoo.html",
+ pokepark:"https://pokepark-kanto.co.jp/",nihom:"https://reserve.pokemon-cafe.jp/"};
+const WIKI={okura:"The Okura Tokyo",tdl:"Tokyo Disneyland",tds:"Tokyo DisneySea",fujiq:"Fuji-Q Highland",spa:"Nagashima Spa Land",akiba:"Akihabara",ikeb:"Sunshine City",
+ tsukiji:"Tsukiji fish market",nakano:"Nakano Broadway",ginza:"Ginza",tokyost:"Tokyo Station",nagoya:"Nagoya Station",nihom:"Nihonbashi",hnd:"Haneda Airport",shinjuku:"Shinjuku Station",
+ changi:"Jewel Changi Airport",gardens:"Gardens by the Bay",tower:"Tokyo Tower",odaiba:"Odaiba",yoyogi:"Meiji Shrine",teamlab:"teamLab Planets",mitaka:"Ghibli Museum",
+ shibuya:"Shibuya Crossing",pokepark:"Yomiuriland",ryokan:"Lake Kawaguchi",chureito:"Chureito Pagoda",oshino:"Oshino Hakkai",scmaglev:"SCMaglev and Railway Park",
+ ghibliP:"Ghibli Park",osakaH:"Dōtonbori",usj:"Universal Studios Japan",kamakura:"Kōtoku-in",enoshima:"Enoshima",zoo:"Singapore Zoo"};
+const placeQ=k=>{const n=k==="okura"?HOTELS[cfg.hotel].name.replace(/^a family apartment$/,"Shinjuku"):k==="dhotel"?DHOTELS[cfg.dhotel].name:P[k].n;return n+(reg(k)==="S"?", Singapore":", Japan");};
+const mapsURL=q=>"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q);
+const nearQ=(k,name)=>{const area={okura:"Toranomon Tokyo",hilton:"Maihama",dhotel:"Maihama"}[k]||P[k].n;return name.replace(/\s*\(.*?\)\s*/g," ").trim()+" "+area+(reg(k)==="S"?" Singapore":" Japan");};
 function openGuide(k){
   const g=guideFor(k),ph=photo(k,960),name=P[k].n;const box=$("guide");
   box.querySelector(".gbody").innerHTML=`${ph?`<img src="${ph.url}" alt="${esc(name)}">`:""}<div class="gin"><h3>${esc(name)}</h3>
-   ${g?`<h4>Things to do</h4><ul>${g.do.map(x=>`<li>${esc(x)}</li>`).join("")}</ul><h4>Where to eat</h4><ul class="eat">${g.eat.map(e=>`<li><b>${esc(e[0])}</b>${esc(e[1])}</li>`).join("")}</ul>
+   ${g?`<h4>Things to do</h4><ul>${g.do.map(x=>`<li>${esc(x)}</li>`).join("")}</ul><h4>Where to eat</h4><ul class="eat">${g.eat.map(e=>`<li><b>${esc(e[0])} <a class="mini-link" href="${mapsURL(nearQ(k,e[0]))}" target="_blank" rel="noopener">Map ↗</a></b>${esc(e[1])}</li>`).join("")}</ul>
    <p class="gtip">📌 ${esc(g.tip)}</p>`:`<p>A stop along the way.</p>`}
+   <h4>Explore more</h4><div class="glinks">
+    <a href="${mapsURL(placeQ(k))}" target="_blank" rel="noopener">📍 Google Maps</a>
+    ${OFFICIAL[k]&&!(k==="okura"&&cfg.hotel!=="okura")?`<a href="${OFFICIAL[k]}" target="_blank" rel="noopener">🌐 Official site</a>`:""}
+    ${WIKI[k]&&!(k==="okura"&&cfg.hotel!=="okura")?`<a href="https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(WIKI[k])}" target="_blank" rel="noopener">📖 Wikipedia</a>`:""}
+    <a href="https://www.google.com/search?q=${encodeURIComponent(P[k].n+" things to do with kids")}" target="_blank" rel="noopener">🔎 More ideas</a>
+    <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(placeQ(k).replace(/, (Japan|Singapore)$/,"")+" walk")}" target="_blank" rel="noopener">▶️ Videos</a></div>
    <p class="gnote">Check hours before you go. Restaurants change, and many close one day a week.</p>
    ${ph?`<a class="gcred" href="${ph.pg}" target="_blank" rel="noopener">Photo: ${esc(ph.by)} · ${esc(ph.lic)} · Wikimedia Commons</a>`:""}</div>`;
   box.hidden=false;box.querySelector(".gclose").focus();
