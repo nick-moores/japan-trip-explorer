@@ -7,6 +7,9 @@
 <meta name="apple-mobile-web-app-title" content="Japan Trip">
 <meta name="theme-color" content="#fbeee9">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗾</text></svg>">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script>window.TILES=1</script>
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Japan Trip Explorer</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -149,6 +152,31 @@ tr.tot td{border:0;padding-top:8px;font-weight:900}
 .rides small{text-align:right;font-weight:700;color:var(--torii);white-space:nowrap;font-size:.78rem}
 #disney h3{font:400 1rem var(--display);margin:16px 0 8px}
 .tabs button{font-size:.84rem;padding:8px 4px}
+#tmap{position:absolute;inset:0}
+.stage.tiles{background:var(--card)}
+.stage.tiles .fs{bottom:40px}
+.stage.tiles .cost{bottom:14px}
+.badge,.replay,.fs,.cost,.mini{z-index:5}
+.maplibregl-ctrl-attrib{font-family:var(--body);font-size:11px}
+.pinw{display:grid;justify-items:center;gap:3px;pointer-events:none}
+.pin{pointer-events:auto;width:48px;height:48px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2.5px #24304f,0 6px 14px rgba(20,30,60,.35);background:#fff center/cover no-repeat;cursor:pointer;display:grid;place-items:center;font-size:22px;padding:0;position:relative}
+.pin.noimg{background:#fff4ec}
+.pin.hotel::after{content:"H";position:absolute;right:-6px;top:-6px;width:20px;height:20px;border-radius:50%;background:var(--torii);color:#fff;font:900 11px/20px var(--body);text-align:center;box-shadow:0 0 0 2px #fff}
+.pin.hit{animation:pop .7s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.4)}100%{transform:scale(1)}}
+.plab{background:#fff;color:#24304f;border:2px solid #24304f;border-radius:999px;padding:1px 8px;font:700 11px var(--body);white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis}
+.veh{width:44px;height:44px;border-radius:50%;background:#fff;border:3px solid #24304f;display:grid;place-items:center;font-size:22px;box-shadow:0 6px 14px rgba(20,30,60,.35);pointer-events:none}
+.veh svg{display:block}
+.maplibregl-popup-content{padding:0;border-radius:16px;overflow:hidden;border:3px solid #24304f;font-family:var(--body);color:#24304f}
+.maplibregl-popup-content img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}
+.pp{padding:8px 12px 10px;display:grid;gap:2px}.pp b{font-size:.95rem}.pp a{color:#5d6886;font-size:.72rem}
+.maplibregl-popup-close-button{background:#fff;border-radius:50%;width:24px;height:24px;top:6px;right:6px;font-size:16px}
+.strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin:0 0 12px}
+.ph{position:relative;display:block;border-radius:14px;overflow:hidden;border:2px solid var(--ink);aspect-ratio:4/3;background:var(--bg);color:#fff;text-decoration:none}
+.ph img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s}
+.ph:hover img{transform:scale(1.06)}
+.ph span{position:absolute;left:0;right:0;bottom:0;padding:14px 8px 5px;font:700 .74rem var(--body);background:linear-gradient(transparent,rgba(0,0,0,.65))}
+.credit{margin:-6px 0 12px;font-size:.7rem;color:var(--muted)}
 </style>
 
 </head>
@@ -156,9 +184,10 @@ tr.tot td{border:0;padding-top:8px;font-weight:900}
 <div class="app">
   <header>
     <h1>Japan <span>Trip</span> Explorer</h1>
-    <div class="sub">5 travelers · 11 days · Tokyo → Fuji → Nagoya → Singapore</div>
+    <div class="sub" id="sub">5 travelers · Tokyo → Fuji → Nagoya → Singapore</div>
   </header>
   <div class="stage">
+    <div id="tmap" hidden></div>
     <canvas id="map" aria-label="Animated map of the day's route"></canvas>
     <div class="badge" id="badge">Trip overview</div>
     <button class="replay" id="replay" type="button">↻ Replay</button>
@@ -542,18 +571,18 @@ function legTime(m){return m==="plane"?2600:m==="bullet"?1900:1400;}
 function startDay(i,instant){
   day=i;camFrom={...cam};camTo=dayCam(i);
   legDur=DAYS[i].legs.map(l=>legTime(l[2]));
-  camDur=instant||RM?0:1500;t0=performance.now();
+  camDur=instant||RM?0:2000;t0=performance.now();
   if(RM){t0-=1e7;}
   renderCard();
+  if(typeof TM!=="undefined"&&TM)TM.show(i);
 }
 function camAt(t){
   if(camDur===0||t>=1)return camTo;
-  const e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+  const e=t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
   const dist=Math.hypot(camTo.x-camFrom.x,camTo.y-camFrom.y);
-  const wMid=Math.max(camFrom.w,camTo.w,dist*1.4);
-  const lw=t<.5?Math.log(camFrom.w)+(Math.log(wMid)-Math.log(camFrom.w))*(t*2):Math.log(wMid)+(Math.log(camTo.w)-Math.log(wMid))*((t-.5)*2);
-  const ew=1-Math.pow(1-Math.min(1,t),2);
-  return{x:camFrom.x+(camTo.x-camFrom.x)*e,y:camFrom.y+(camTo.y-camFrom.y)*e,w:Math.exp(t<.5?lw:lw)*1+0*ew};
+  const a=Math.log(camFrom.w),b=Math.log(camTo.w),m=Math.log(Math.max(camFrom.w,camTo.w,dist*1.2));
+  const bump=Math.max(0,m-Math.max(a,b));
+  return{x:camFrom.x+(camTo.x-camFrom.x)*e,y:camFrom.y+(camTo.y-camFrom.y)*e,w:Math.exp(a+(b-a)*e+bump*Math.sin(Math.PI*t))};
 }
 
 /* ---------- drawing ---------- */
@@ -695,6 +724,8 @@ function frame(now){
 }
 
 /* ---------- panel ---------- */
+const PHOTOS={"akiba":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0c/Akihabara_Night.jpg/960px-Akihabara_Night.jpg","by":"ElHeineken","lic":"CC BY 4.0","pg":"https://commons.wikimedia.org/wiki/File:Akihabara_Night.jpg"},"fantasyH":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/3/36/Building_in_Fantasy_Springs%2C_Tokyo_Disney_Sea.jpg/960px-Building_in_Fantasy_Springs%2C_Tokyo_Disney_Sea.jpg","by":"1313tutu","lic":"CC0","pg":"https://commons.wikimedia.org/wiki/File:Building_in_Fantasy_Springs,_Tokyo_Disney_Sea.jpg"},"chureito":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3b/Chureito_Pagoda_and_Mount_Fuji_20241022.jpg/960px-Chureito_Pagoda_and_Mount_Fuji_20241022.jpg","by":"Supanut Arunoprayote","lic":"CC BY 4.0","pg":"https://commons.wikimedia.org/wiki/File:Chureito_Pagoda_and_Mount_Fuji_20241022.jpg"},"tdl":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/3/32/Cinderella_Castle_at_the_Tokyo_Disneyland_Resort.jpg/960px-Cinderella_Castle_at_the_Tokyo_Disneyland_Resort.jpg","by":"PublicDomainFan08","lic":"CC0","pg":"https://commons.wikimedia.org/wiki/File:Cinderella_Castle_at_the_Tokyo_Disneyland_Resort.jpg"},"crowne":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fa/Crowne_Plaza_Changi_Airport%2C_Singapore_-_20120320.jpg/960px-Crowne_Plaza_Changi_Airport%2C_Singapore_-_20120320.jpg","by":"Katmorro","lic":"CC BY-SA 3.0","pg":"https://commons.wikimedia.org/wiki/File:Crowne_Plaza_Changi_Airport,_Singapore_-_20120320.jpg"},"ambassador":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/6/60/Disney_ambassador_hotel.jpg/960px-Disney_ambassador_hotel.jpg","by":"mekarabeam","lic":"CC BY 3.0","pg":"https://commons.wikimedia.org/wiki/File:Disney_ambassador_hotel.jpg"},"osakaH":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/4/47/Dotonbori%2C_Osaka%2C_at_night%2C_November_2016.jpg/960px-Dotonbori%2C_Osaka%2C_at_night%2C_November_2016.jpg","by":"Martin Falbisoner","lic":"CC BY-SA 4.0","pg":"https://commons.wikimedia.org/wiki/File:Dotonbori,_Osaka,_at_night,_November_2016.jpg"},"zoo":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/1/11/Elephas_maximus_in_Singapore_Zoo%2C_20240206_0857_6202.jpg/960px-Elephas_maximus_in_Singapore_Zoo%2C_20240206_0857_6202.jpg","by":"Jakub Hałun","lic":"CC BY 4.0","pg":"https://commons.wikimedia.org/wiki/File:Elephas_maximus_in_Singapore_Zoo,_20240206_0857_6202.jpg"},"fujiq":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/2/24/Fujiyama_2008_%282765653784%29.jpg/960px-Fujiyama_2008_%282765653784%29.jpg","by":"scion_cho","lic":"CC BY 2.0","pg":"https://commons.wikimedia.org/wiki/File:Fujiyama_2008_(2765653784).jpg"},"mitaka":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/4/44/Ghibli_Museum%2C_Mitaka%2C_Tokyo%2C_20240823_1131_5545.jpg/960px-Ghibli_Museum%2C_Mitaka%2C_Tokyo%2C_20240823_1131_5545.jpg","by":"Jakub Hałun","lic":"CC BY 4.0","pg":"https://commons.wikimedia.org/wiki/File:Ghibli_Museum,_Mitaka,_Tokyo,_20240823_1131_5545.jpg"},"ginza":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/9/95/Ginza_Wako_20241021.jpg/960px-Ginza_Wako_20241021.jpg","by":"Supanut Arunoprayote","lic":"CC BY 4.0","pg":"https://commons.wikimedia.org/wiki/File:Ginza_Wako_20241021.jpg"},"hakugei":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7f/Hakugei_wideshot.jpg/960px-Hakugei_wideshot.jpg","by":"Themeparkvex","lic":"CC0","pg":"https://commons.wikimedia.org/wiki/File:Hakugei_wideshot.jpg"},"nihom":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/3/31/Hokusai01_nihonbashi.jpg/960px-Hokusai01_nihonbashi.jpg","by":"Katsushika Hokusai","lic":"Public domain","pg":"https://commons.wikimedia.org/wiki/File:Hokusai01_nihonbashi.jpg"},"miracosta":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5d/Hotel_MiraCosta%2C_Porto_Paradiso_Side%2C_Night.jpg/960px-Hotel_MiraCosta%2C_Porto_Paradiso_Side%2C_Night.jpg","by":"w00kie","lic":"CC BY 2.0","pg":"https://commons.wikimedia.org/wiki/File:Hotel_MiraCosta,_Porto_Paradiso_Side,_Night.jpg"},"okura":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fb/Hotel_Okura_Tokyo_190912a3.jpg/960px-Hotel_Okura_Tokyo_190912a3.jpg","by":"江戸村のとくぞう","lic":"CC BY-SA 4.0","pg":"https://commons.wikimedia.org/wiki/File:Hotel_Okura_Tokyo_190912a3.jpg"},"enoshima":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/6/61/Island_Enoshima._The_Fuji_can_be_seen_far_away.jpg/960px-Island_Enoshima._The_Fuji_can_be_seen_far_away.jpg","by":"Utagawa Kuniyoshi","lic":"Public domain","pg":"https://commons.wikimedia.org/wiki/File:Island_Enoshima._The_Fuji_can_be_seen_far_away.jpg"},"kamakura":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/2/26/Kamakura_Daibutsu_20170210.jpg/960px-Kamakura_Daibutsu_20170210.jpg","by":"Suicasmo","lic":"CC BY-SA 4.0","pg":"https://commons.wikimedia.org/wiki/File:Kamakura_Daibutsu_20170210.jpg"},"yoyogi":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/1/14/Meiji_Shrine_Minami-sando-torii_2023-01-26.jpg/960px-Meiji_Shrine_Minami-sando-torii_2023-01-26.jpg","by":"Asanagi","lic":"CC0","pg":"https://commons.wikimedia.org/wiki/File:Meiji_Shrine_Minami-sando-torii_2023-01-26.jpg"},"mitsui":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2e/Mitsui_Garden_Hotel_Ginza_Premier_Moderate_bedroom_20151223-001.jpg/960px-Mitsui_Garden_Hotel_Ginza_Premier_Moderate_bedroom_20151223-001.jpg","by":"J o","lic":"CC BY-SA 4.0","pg":"https://commons.wikimedia.org/wiki/File:Mitsui_Garden_Hotel_Ginza_Premier_Moderate_bedroom_20151223-001.jpg"},"ghibliP":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6d/Mononoke_Village_of_Ghibli_Park_-_1.jpg/960px-Mononoke_Village_of_Ghibli_Park_-_1.jpg","by":"Kyu3a","lic":"CC BY-SA 4.0","pg":"https://commons.wikimedia.org/wiki/File:Mononoke_Village_of_Ghibli_Park_-_1.jpg"},"ryokan":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/6/63/Mount_Fuji_from_Lake_Kawaguchi_20170206.jpg/960px-Mount_Fuji_from_Lake_Kawaguchi_20170206.jpg","by":"Suicasmo","lic":"CC BY-SA 4.0","pg":"https://commons.wikimedia.org/wiki/File:Mount_Fuji_from_Lake_Kawaguchi_20170206.jpg"},"nagoya":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3f/Nagoya_Station_JR_Central_Towers_and_JR_Gate_Tower.jpg/960px-Nagoya_Station_JR_Central_Towers_and_JR_Gate_Tower.jpg","by":"FZHS","lic":"CC0","pg":"https://commons.wikimedia.org/wiki/File:Nagoya_Station_JR_Central_Towers_and_JR_Gate_Tower.jpg"},"nagoyaH":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4c/Nagoya_Station_at_Night_3280199097.jpg/960px-Nagoya_Station_at_Night_3280199097.jpg","by":"rumpleteaser","lic":"CC BY 2.0","pg":"https://commons.wikimedia.org/wiki/File:Nagoya_Station_at_Night_3280199097.jpg"},"nakano":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b3/Nakano_Broadway_2021130_%E2%91%A4.jpg/960px-Nakano_Broadway_2021130_%E2%91%A4.jpg","by":"番記者","lic":"CC BY-SA 4.0","pg":"https://commons.wikimedia.org/wiki/File:Nakano_Broadway_2021130_%E2%91%A4.jpg"},"odaiba":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4c/Odaiba_Marine_Park_at_night_20070523.jpg/960px-Odaiba_Marine_Park_at_night_20070523.jpg","by":"Tomo Moriya from Tokyo, Japan","lic":"CC BY-SA 2.0","pg":"https://commons.wikimedia.org/wiki/File:Odaiba_Marine_Park_at_night_20070523.jpg"},"oshino":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fd/Oshino-Hakkai-Nakaike.jpg/960px-Oshino-Hakkai-Nakaike.jpg","by":"MaedaAkihiko","lic":"CC BY-SA 4.0","pg":"https://commons.wikimedia.org/wiki/File:Oshino-Hakkai-Nakaike.jpg"},"changi":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/0/02/Rain_Vortex_Jewel_Changi_Airport.jpg/960px-Rain_Vortex_Jewel_Changi_Airport.jpg","by":"kallerna","lic":"CC BY-SA 4.0","pg":"https://commons.wikimedia.org/wiki/File:Rain_Vortex_Jewel_Changi_Airport.jpg"},"toystoryH":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/7/72/Room_at_the_Toy_Story_Hotel_in_Tokyo_Disney_Resort.jpg/960px-Room_at_the_Toy_Story_Hotel_in_Tokyo_Disney_Resort.jpg","by":"nagi usano","lic":"CC BY 4.0","pg":"https://commons.wikimedia.org/wiki/File:Room_at_the_Toy_Story_Hotel_in_Tokyo_Disney_Resort.jpg"},"scmaglev":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/9/95/Series_N700_unit_X0_at_SCMAGLEV_and_Railway_Park.jpg/960px-Series_N700_unit_X0_at_SCMAGLEV_and_Railway_Park.jpg","by":"Minoru Umesako","lic":"CC BY-SA 4.0","pg":"https://commons.wikimedia.org/wiki/File:Series_N700_unit_X0_at_SCMAGLEV_and_Railway_Park.jpg"},"shinjuku":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/c/ce/Shinjuku_Station_at_night.jpg/960px-Shinjuku_Station_at_night.jpg","by":"Isana Chiba","lic":"CC BY-SA 4.0","pg":"https://commons.wikimedia.org/wiki/File:Shinjuku_Station_at_night.jpg"},"spa":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/0/07/Steel_Dragon_2000_%28Nagashima_Spa_Land%29.jpg/960px-Steel_Dragon_2000_%28Nagashima_Spa_Land%29.jpg","by":"Christophe95","lic":"CC BY-SA 4.0","pg":"https://commons.wikimedia.org/wiki/File:Steel_Dragon_2000_(Nagashima_Spa_Land).jpg"},"ikeb":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ac/Sunshine_60_Street_2020-04-19.jpg/960px-Sunshine_60_Street_2020-04-19.jpg","by":"Asanagi","lic":"CC0","pg":"https://commons.wikimedia.org/wiki/File:Sunshine_60_Street_2020-04-19.jpg"},"gardens":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/0/00/Supertree_Grove_at_night.jpg/960px-Supertree_Grove_at_night.jpg","by":"Kanzcech","lic":"CC BY-SA 4.0","pg":"https://commons.wikimedia.org/wiki/File:Supertree_Grove_at_night.jpg"},"teamlab":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0e/Teamlab_toyosu.jpg/960px-Teamlab_toyosu.jpg","by":"Syced","lic":"CC0","pg":"https://commons.wikimedia.org/wiki/File:Teamlab_toyosu.jpg"},"tdlhotel":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/6/60/Tokyo_DisneyLand_Hotel.jpg/960px-Tokyo_DisneyLand_Hotel.jpg","by":"掬茶","lic":"CC BY-SA 3.0","pg":"https://commons.wikimedia.org/wiki/File:Tokyo_DisneyLand_Hotel.jpg"},"tds":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3f/Tokyo_DisneySea_-_A_Walk_Along_Mount_Prometheus.jpg/960px-Tokyo_DisneySea_-_A_Walk_Along_Mount_Prometheus.jpg","by":"Okwhatev","lic":"CC BY-SA 2.5","pg":"https://commons.wikimedia.org/wiki/File:Tokyo_DisneySea_-_A_Walk_Along_Mount_Prometheus.jpg"},"shibuya":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c5/Tokyo_Shibuya_Scramble_Crossing_2018-10-09.jpg/960px-Tokyo_Shibuya_Scramble_Crossing_2018-10-09.jpg","by":"Benh LIEU SONG","lic":"CC BY-SA 2.0","pg":"https://commons.wikimedia.org/wiki/File:Tokyo_Shibuya_Scramble_Crossing_2018-10-09.jpg"},"tokyost":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/5/56/Tokyo_Station_%28Marunouchi_Building%29.jpg/960px-Tokyo_Station_%28Marunouchi_Building%29.jpg","by":"Alexandr3126","lic":"CC BY-SA 4.0","pg":"https://commons.wikimedia.org/wiki/File:Tokyo_Station_(Marunouchi_Building).jpg"},"tower":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d7/Tokyo_Tower_seen_from_Shiba_Park.jpg/960px-Tokyo_Tower_seen_from_Shiba_Park.jpg","by":"Ymblanter","lic":"CC BY-SA 4.0","pg":"https://commons.wikimedia.org/wiki/File:Tokyo_Tower_seen_from_Shiba_Park.jpg"},"tsukiji":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ed/Tsukiji_Outer_Market_2.jpg/960px-Tsukiji_Outer_Market_2.jpg","by":"Aw1805","lic":"CC BY-SA 3.0","pg":"https://commons.wikimedia.org/wiki/File:Tsukiji_Outer_Market_2.jpg"},"usj":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/UNIVERSAL_STUDIOS_JAPAN_ENTRANCE.jpg/960px-UNIVERSAL_STUDIOS_JAPAN_ENTRANCE.jpg","by":"Tokumeigakarinoaoshima","lic":"CC0","pg":"https://commons.wikimedia.org/wiki/File:UNIVERSAL_STUDIOS_JAPAN_ENTRANCE.jpg"},"hnd":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/0/06/Views_of_Haneda_airport_near_Terminal_3.jpg/960px-Views_of_Haneda_airport_near_Terminal_3.jpg","by":"Syced","lic":"CC0","pg":"https://commons.wikimedia.org/wiki/File:Views_of_Haneda_airport_near_Terminal_3.jpg"},"hilton":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d6/%E5%B8%8C%E5%B0%94%E9%A1%BF%E4%B8%9C%E4%BA%AC%E6%B9%BE%E9%85%92%E5%BA%97_HILTON_TOKYO_BAY_-_panoramio.jpg/960px-%E5%B8%8C%E5%B0%94%E9%A1%BF%E4%B8%9C%E4%BA%AC%E6%B9%BE%E9%85%92%E5%BA%97_HILTON_TOKYO_BAY_-_panoramio.jpg","by":"山海风","lic":"CC BY-SA 3.0","pg":"https://commons.wikimedia.org/wiki/File:%E5%B8%8C%E5%B0%94%E9%A1%BF%E4%B8%9C%E4%BA%AC%E6%B9%BE%E9%85%92%E5%BA%97_HILTON_TOKYO_BAY_-_panoramio.jpg"},"celebration":{"src":"https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6d/%E6%9D%B1%E4%BA%AC%E3%83%87%E3%82%A3%E3%82%BA%E3%83%8B%E3%83%BC%E3%82%BB%E3%83%AC%E3%83%96%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E3%83%9B%E3%83%86%E3%83%AB.jpg/960px-%E6%9D%B1%E4%BA%AC%E3%83%87%E3%82%A3%E3%82%BA%E3%83%8B%E3%83%BC%E3%82%BB%E3%83%AC%E3%83%96%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E3%83%9B%E3%83%86%E3%83%AB.jpg","by":"くろふね","lic":"CC BY-SA 4.0","pg":"https://commons.wikimedia.org/wiki/File:%E6%9D%B1%E4%BA%AC%E3%83%87%E3%82%A3%E3%82%BA%E3%83%8B%E3%83%BC%E3%82%BB%E3%83%AC%E3%83%96%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E3%83%9B%E3%83%86%E3%83%AB.jpg"}};
+const PHOTOS_ON=!!(window.TILES&&window.maplibregl);
 const card=document.getElementById("card"),dots=document.getElementById("dots");
 const $=id=>document.getElementById(id);
 const fmt=v=>"$"+(Math.round(v/50)*50).toLocaleString("en-US");
@@ -707,12 +738,15 @@ let shown=0,costAnim=null;
 function updateCost(){
   const c=costOf(cfg,DAYS),target=c.mid,from=shown||target,t0=performance.now();
   const pill=$("cost");pill.classList.toggle("over",c.mid>32000);
+  $("sub").textContent=`5 travelers · ${c.days} days · Tokyo → Fuji → Nagoya → Singapore`;
   $("costdays").textContent=`${c.days} days${c.rest?` · ${c.rest} rest`:""}`;
   cancelAnimationFrame(costAnim);
   const step=now=>{const k=Math.min(1,(now-t0)/600),v=from+(target-from)*(1-Math.pow(1-k,3));shown=v;$("costval").textContent="≈ "+k1(v);if(k<1)costAnim=requestAnimationFrame(step);};
   costAnim=requestAnimationFrame(step);
   renderPlan(c);
 }
+function strip(keys){if(!PHOTOS_ON)return"";const ks=keys.filter(k=>photo(k)&&!["hnd","home","tokyost","shinjuku","nagoya","shinosaka"].includes(k)).slice(0,4);if(!ks.length)return"";
+  return`<div class="strip">${ks.map(k=>{const p=photo(k);return`<a class="ph" href="${p.pg}" target="_blank" rel="noopener" title="Photo: ${esc(p.by)} · ${esc(p.lic)}"><img loading="lazy" src="${p.url}" alt="${esc(P[k].n)}"><span>${esc(P[k].n)}</span></a>`;}).join("")}</div><p class="credit">Photos: ${[...new Set(ks.map(k=>photo(k).by))].map(esc).join(", ")} · Wikimedia Commons</p>`;}
 function renderCard(){
   const d=DAYS[day],last=DAYS.length-1,c=costOf(cfg,DAYS);
   $("badge").textContent=d.overview?"Trip overview":`Day ${day} · ${d.where}`;
@@ -721,14 +755,14 @@ function renderCard(){
   $("prev").disabled=day===0;$("next").disabled=day===last;
   if(d.overview){
     const tok=DAYS.filter(x=>x.night==="tokyo").length,sgD=DAYS.filter(x=>x.where==="Singapore").length;
-    card.innerHTML=`<div class="kicker"><span class="where">${PACES[cfg.pace].name} plan</span>${c.days} days · 2 countries</div><h2>${d.t}</h2>
+    card.innerHTML=`<div class="kicker"><span class="where">${PACES[cfg.pace].name} plan</span>${c.days} days · 2 countries</div><h2>${d.t}</h2>${strip(["tdl","fujiq","spa","gardens"])}
     <ul class="steps"><li><span class="ic">🗼</span><p><b>${tok} nights · Tokyo</b>Home base at ${esc(HOTELS[cfg.hotel].name)}, with day trips to Disney, Mt. Fuji and Nagoya.</p></li>
     <li><span class="ic">🎢</span><p><b>The must-dos</b>Pokémon Centers, Tokyo Disneyland and DisneySea, Fuji-Q Highland and Nagashima Spa Land.</p></li>
     ${c.rest?`<li><span class="ic">😴</span><p><b>${c.rest} rest day${c.rest>1?"s":""}</b>Built in after the biggest days so nobody burns out.</p></li>`:""}
     <li><span class="ic">🌴</span><p><b>${sgD} day${sgD>1?"s":""} · Singapore</b>Jewel Changi's indoor waterfall and Gardens by the Bay before flying home.</p></li></ul>
     <div class="ride"><div><span>Estimated cost</span><small>${fmt(c.lo)} – ${fmt(c.hi)}</small></div></div>
     <button class="link" type="button" data-tab="plan">Change the plan and see costs →</button>`;return;}
-  card.innerHTML=`<div class="kicker"><span class="where${d.rest?" restw":""}">${esc(d.where)}${d.rest?" · rest":""}</span>Day ${day} of ${last}</div><h2>${esc(d.t)}</h2>
+  card.innerHTML=`<div class="kicker"><span class="where${d.rest?" restw":""}">${esc(d.where)}${d.rest?" · rest":""}</span>Day ${day} of ${last}</div><h2>${esc(d.t)}</h2>${strip([...new Set(d.legs.flatMap(l=>[l[0],l[1]]))])}
   <ul class="steps">${d.steps.map(s=>`<li><span class="ic">${s[0]}</span><p><b>${esc(s[1])}</b>${fill(s[2])}</p></li>`).join("")}</ul>
   ${d.rides?`<div class="ride">${d.rides.map(r=>`<div><span>🎢 ${esc(r[0])}</span><small>${esc(r[1])}</small></div>`).join("")}</div>`:""}
   ${d.tips?`<div class="tips">${d.tips.map(t=>`<span class="tip">📌 ${esc(t)}</span>`).join("")}</div>`:""}`;
@@ -797,7 +831,96 @@ addEventListener("keydown",e=>{if(e.key==="ArrowRight")go(day+1);if(e.key==="Arr
 let sx=null;cv.addEventListener("pointerdown",e=>sx=e.clientX);
 cv.addEventListener("pointerup",e=>{if(sx!==null&&Math.abs(e.clientX-sx)>40)go(day+(e.clientX<sx?1:-1));sx=null;});
 
-cam=dayCam(0);startDay(0,true);updateCost();requestAnimationFrame(frame);
+/* ---------- real map + photos (website version only) ---------- */
+function photoKey(k){
+  if(k==="okura")return{okura:"okura",hilton:"hilton",city:"mitsui",apt:null}[cfg.hotel];
+  if(k==="dhotel")return{toystory:"toystoryH",miracosta:"miracosta",ambassador:"ambassador",tdlhotel:"tdlhotel",fantasy:"fantasyH",celebration:"celebration"}[cfg.dhotel]||null;
+  return PHOTOS[k]?k:null;
+}
+const photo=(k,size)=>{const p=PHOTOS_ON&&PHOTOS[photoKey(k)];return p?{...p,url:p.src.replace("/960px-",`/${size||330}px-`)}:null;};
+const ICON={hnd:"✈️",changi:"✈️",home:"🏡",shinosaka:"🚉",tokyost:"🚉",nagoya:"🚉",shinjuku:"🚉",pokepark:"⚡"};
+var TM=(()=>{
+  if(!PHOTOS_ON)return null;
+  const box=$("tmap");box.hidden=false;cv.hidden=true;document.querySelector(".stage").classList.add("tiles");
+  const map=new maplibregl.Map({container:box,style:"https://tiles.openfreemap.org/styles/liberty",center:[137,34],zoom:3.3,
+    attributionControl:false,dragRotate:false,pitchWithRotate:false,fadeDuration:150});
+  map.addControl(new maplibregl.AttributionControl({compact:true,customAttribution:"Photos: Wikimedia Commons contributors"}),"bottom-right");
+  map.touchZoomRotate.disableRotation();
+  let ready=false,pending=null,markers={},veh=null,raf=0,run=0;
+  const curve=l=>{const c=legCurve(P[l[0]],P[l[1]],l[2]),pts=[];for(let i=0;i<=48;i++)pts.push(qp(c,i/48));return{c,pts};};
+  const fc=f=>({type:"FeatureCollection",features:f});
+  const feat=(pts,m)=>({type:"Feature",properties:{m,col:modeCol(m)},geometry:{type:"LineString",coordinates:pts}});
+  map.on("load",()=>{
+    ["trail","today"].forEach(id=>map.addSource(id,{type:"geojson",data:fc([])}));
+    const lay=(src,op,w)=>{
+      const base={type:"line",source:src,layout:{"line-cap":"round","line-join":"round"}};
+      map.addLayer({...base,id:src+"-case",filter:["!=",["get","m"],"plane"],paint:{"line-color":"#ffffff","line-width":w+4,"line-opacity":op*.9}});
+      map.addLayer({...base,id:src+"-line",filter:["!=",["get","m"],"plane"],paint:{"line-color":["get","col"],"line-width":w,"line-opacity":op}});
+      map.addLayer({...base,id:src+"-air",filter:["==",["get","m"],"plane"],paint:{"line-color":["get","col"],"line-width":w*.8,"line-opacity":op,"line-dasharray":[0.6,1.8]}});
+    };
+    lay("trail",.22,2.5);lay("today",1,5);
+    ready=true;if(pending!==null)show(pending);
+  });
+  function pinEl(k,hotel){
+    const wrap=document.createElement("div"),el=document.createElement("button");wrap.className="pinw";el.type="button";
+    const ph=photo(k);el.className="pin"+(ph?"":" noimg")+(hotel?" hotel":"");
+    if(ph)el.style.backgroundImage=`url("${ph.url}")`;else el.textContent=ICON[k]||"📍";
+    el.setAttribute("aria-label",P[k].n);wrap.appendChild(el);
+    const lab=document.createElement("span");lab.className="plab";lab.textContent=P[k].n;wrap.appendChild(lab);
+    return wrap;
+  }
+  function popupHTML(k){const ph=photo(k,960);
+    return`${ph?`<img src="${ph.url}" alt="${esc(P[k].n)}">`:""}<div class="pp"><b>${esc(P[k].n)}</b>${ph?`<a href="${ph.pg}" target="_blank" rel="noopener">Photo: ${esc(ph.by)} · ${esc(ph.lic)}</a>`:""}</div>`;}
+  function addPin(k){
+    const el=pinEl(k,P[k].hotel);const m=new maplibregl.Marker({element:el,anchor:"center"}).setLngLat([P[k].lon,P[k].lat])
+      .setPopup(new maplibregl.Popup({offset:28,maxWidth:"280px",closeButton:true}).setHTML(popupHTML(k))).addTo(map);
+    markers[k]=m;
+  }
+  function moveVeh(cur){
+    if(!cur){if(veh){veh.remove();veh=null;}return;}
+    if(!veh||veh._m!==cur.m){if(veh)veh.remove();const el=document.createElement("div");el.className="veh";
+      el.innerHTML=cur.m==="plane"?`<svg viewBox="-16 -14 32 28" width="30" height="26"><path d="M13 0Q11-2.5 6-2.5H1L-4-12H-8L-5-2.5H-10L-13-7H-15L-13 0-15 7H-13L-10 2.5H-5L-8 12H-4L1 2.5H6Q11 2.5 13 0Z" fill="${C["--sky"]}" stroke="${C["--ink"]}" stroke-width="1.5"/></svg>`:`<span>${M[cur.m]}</span>`;
+      veh=new maplibregl.Marker({element:el,anchor:"center"}).setLngLat(cur.pos).addTo(map);veh._m=cur.m;}
+    veh.setLngLat(cur.pos);
+    if(cur.m==="plane"){const a=map.project(qp(cur.c,Math.max(0,cur.e-.01))),b=map.project(qp(cur.c,Math.min(1,cur.e+.01)));
+      veh.getElement().firstChild.style.transform=`rotate(${Math.atan2(b.y-a.y,b.x-a.x)}rad)`;}
+  }
+  function hit(k){const m=markers[k];if(!m)return;const el=m.getElement().firstChild;if(el.classList.contains("hit"))return;el.classList.add("hit");}
+  function show(i){
+    if(!ready){pending=i;return;}
+    cancelAnimationFrame(raf);const my=++run;
+    Object.values(markers).forEach(m=>m.remove());markers={};moveVeh(null);
+    const d=DAYS[i],big=d.overview||d.final;
+    const others=big?DAYS.slice(1,-1):DAYS.filter((x,j)=>j>0&&j!==i);
+    map.getSource("trail").setData(fc(others.flatMap(x=>x.legs.map(l=>feat(curve(l).pts,l[2])))));
+    map.getSource("today").setData(fc([]));
+    const keys=big?["okura","tdl","tds","fujiq","spa","changi","gardens"]:[...new Set(d.legs.flatMap(l=>[l[0],l[1]]))].filter(k=>k!=="home"||!big);
+    keys.forEach(addPin);
+    const pts=big?[P.okura,P.fujiq,P.spa,P.changi]:d.legs.flatMap(l=>[P[l[0]],P[l[1]]]);
+    if(d.final||d.legs.some(l=>l[0]==="home"||l[1]==="home"))pts.push(P.home);
+    const b=new maplibregl.LngLatBounds();pts.forEach(p=>b.extend([p.lon,p.lat]));
+    const r=box.getBoundingClientRect();
+    const cam=map.cameraForBounds(b,{padding:{top:70,bottom:Math.min(110,r.height*.22),left:Math.min(60,r.width*.12),right:Math.min(70,r.width*.14)},maxZoom:14});
+    const dur=RM?0:2600;
+    map.flyTo({...cam,duration:dur,curve:1.5,speed:1.1,essential:true});
+    if(big||!d.legs.length)return;
+    const legs=d.legs.map(curve),durs=d.legs.map(l=>legTime(l[2])*1.25),total=durs.reduce((a,b)=>a+b,0);
+    const start=performance.now()+dur*.8;
+    const step=now=>{
+      if(my!==run)return;
+      let t=now-start;const done=[];let cur=null;
+      legs.forEach((L,j)=>{const p=Math.max(0,Math.min(1,t/durs[j]));t-=durs[j];if(j===0&&p>0)hit(d.legs[0][0]);
+        if(p>0){const e=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;const n=Math.floor(e*48)+1;done.push(feat([...L.pts.slice(0,n),qp(L.c,e)],d.legs[j][2]));
+          if(p<1)cur={pos:qp(L.c,e),m:d.legs[j][2],c:L.c,e};else hit(d.legs[j][1]);}});
+      map.getSource("today").setData(fc(done));moveVeh(cur);
+      if(now-start<total)raf=requestAnimationFrame(step);else moveVeh(null);
+    };
+    raf=requestAnimationFrame(step);
+  }
+  return{show,map};
+})();
+
+cam=dayCam(0);startDay(0,true);updateCost();if(!TM)requestAnimationFrame(frame);
 </script>
 
 </body>
