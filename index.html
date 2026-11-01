@@ -89,9 +89,11 @@ tr.tot td{border:0;padding-top:8px;font-weight:900}
 .mini{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom,0px));display:none;align-items:center;gap:10px;background:var(--card);border:2px solid var(--ink);border-radius:999px;padding:4px;max-width:calc(100% - 24px)}
 .app.focus .mini{display:flex}
 .mini span{font-weight:900;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.mini .btn{width:40px;height:40px;font-size:1.1rem;box-shadow:none}
+.mini .btn{width:32px;height:32px;font-size:.95rem;box-shadow:none;border-width:2px}
+.mini{gap:6px;padding:3px}.mini span{font-size:.85rem}
 .fs{position:absolute;right:14px;bottom:14px;background:var(--card);color:var(--ink);border:2px solid var(--ink);border-radius:999px;padding:4px 12px;font:700 .85rem var(--body);cursor:pointer}
-.app.focus .fs{bottom:auto;top:52px}
+.app.focus .stage .fs{top:14px;bottom:auto;right:14px;width:38px;height:38px;padding:0;border-radius:50%;font-size:1rem;line-height:1}
+.app.focus .stage .replay{right:62px}
 @media (prefers-reduced-motion:reduce){.btn,.dot{transition:none}}
 .tabs{display:flex;gap:6px;background:var(--card);border:3px solid var(--ink);border-radius:999px;padding:4px}
 .tabs button{flex:1;border:0;background:none;color:var(--ink);font:700 .9rem var(--body);padding:8px 6px;border-radius:999px;cursor:pointer;white-space:nowrap}
@@ -103,7 +105,7 @@ tr.tot td{border:0;padding-top:8px;font-weight:900}
 #costval{font:400 1.35rem var(--display);color:var(--matcha);font-variant-numeric:tabular-nums}
 .cost.over #costval{color:var(--torii)}
 #costdays{font-size:.78rem;font-weight:700;color:var(--muted)}
-.app.focus .cost{bottom:72px}
+.app.focus .cost{bottom:58px}
 .dot.rest{background:var(--matcha);color:#fff}
 .dot.rest.on{background:var(--gold);color:var(--ink)}
 .restw{background:var(--matcha);color:#fff}
@@ -162,6 +164,7 @@ tr.tot td{border:0;padding-top:8px;font-weight:900}
 .pin{pointer-events:auto;width:48px;height:48px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2.5px #24304f,0 6px 14px rgba(20,30,60,.35);background:#fff center/cover no-repeat;cursor:pointer;display:grid;place-items:center;font-size:22px;padding:0;position:relative}
 .pin.noimg{background:#fff4ec}
 .pin.hotel::after{content:"H";position:absolute;right:-6px;top:-6px;width:20px;height:20px;border-radius:50%;background:var(--torii);color:#fff;font:900 11px/20px var(--body);text-align:center;box-shadow:0 0 0 2px #fff}
+.pin.here{box-shadow:0 0 0 2.5px #24304f,0 0 0 8px rgba(242,180,64,.55),0 6px 14px rgba(20,30,60,.35)}
 .pin.hit{animation:pop .7s cubic-bezier(.3,1.6,.5,1)}
 @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.4)}100%{transform:scale(1)}}
 .plab{background:#fff;color:#24304f;border:2px solid #24304f;border-radius:999px;padding:1px 8px;font:700 11px var(--body);white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis}
@@ -820,7 +823,7 @@ document.getElementById("replay").onclick=()=>startDay(day);
 document.getElementById("mprev").onclick=()=>go(day-1);
 document.getElementById("mnext").onclick=()=>go(day+1);
 const app=document.querySelector(".app"),fsb=document.getElementById("fs");
-function setFocus(on){app.classList.toggle("focus",on);fsb.textContent=on?"✕ Exit full screen":"⛶ Full screen";}
+function setFocus(on){app.classList.toggle("focus",on);fsb.textContent=on?"✕":"⛶ Full screen";fsb.setAttribute("aria-label",on?"Exit full screen":"Full screen");fsb.title=on?"Exit full screen":"";}
 fsb.onclick=async()=>{
   const on=!app.classList.contains("focus");
   if(on){setFocus(true);try{await document.documentElement.requestFullscreen?.();}catch(e){}}
@@ -846,7 +849,11 @@ var TM=(()=>{
     attributionControl:false,dragRotate:false,pitchWithRotate:false,fadeDuration:150});
   map.addControl(new maplibregl.AttributionControl({compact:true,customAttribution:"Photos: Wikimedia Commons contributors"}),"bottom-right");
   map.touchZoomRotate.disableRotation();
-  let ready=false,pending=null,markers={},veh=null,raf=0,run=0;
+  let ready=false,pending=null,markers={},veh=null,raf=0,run=0,userMoved=false;
+  map.on("dragstart",()=>{userMoved=true;});map.on("wheel",()=>{userMoved=true;});
+  const pad=()=>{const r=box.getBoundingClientRect();return{top:Math.min(80,r.height*.18),bottom:Math.min(110,r.height*.22),left:Math.min(70,r.width*.14),right:Math.min(70,r.width*.14)};};
+  const inView=(pts,inset)=>{const r=box.getBoundingClientRect();return pts.every(p=>{const q=map.project(p);return q.x>r.width*inset&&q.x<r.width*(1-inset)&&q.y>r.height*inset&&q.y<r.height*(1-inset);});};
+  function frame(pts,dur,maxZoom){if(userMoved)return;const b=new maplibregl.LngLatBounds();pts.forEach(p=>b.extend(p));const c=map.cameraForBounds(b,{padding:pad(),maxZoom});if(c)map.easeTo({...c,duration:RM?0:dur,easing:t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2});}
   const curve=l=>{const c=legCurve(P[l[0]],P[l[1]],l[2]),pts=[];for(let i=0;i<=48;i++)pts.push(qp(c,i/48));return{c,pts};};
   const fc=f=>({type:"FeatureCollection",features:f});
   const feat=(pts,m)=>({type:"Feature",properties:{m,col:modeCol(m)},geometry:{type:"LineString",coordinates:pts}});
@@ -888,7 +895,7 @@ var TM=(()=>{
   function hit(k){const m=markers[k];if(!m)return;const el=m.getElement().firstChild;if(el.classList.contains("hit"))return;el.classList.add("hit");}
   function show(i){
     if(!ready){pending=i;return;}
-    cancelAnimationFrame(raf);const my=++run;
+    cancelAnimationFrame(raf);const my=++run;userMoved=false;
     Object.values(markers).forEach(m=>m.remove());markers={};moveVeh(null);
     const d=DAYS[i],big=d.overview||d.final;
     const others=big?DAYS.slice(1,-1):DAYS.filter((x,j)=>j>0&&j!==i);
@@ -899,21 +906,23 @@ var TM=(()=>{
     const pts=big?[P.okura,P.fujiq,P.spa,P.changi]:d.legs.flatMap(l=>[P[l[0]],P[l[1]]]);
     if(d.final||d.legs.some(l=>l[0]==="home"||l[1]==="home"))pts.push(P.home);
     const b=new maplibregl.LngLatBounds();pts.forEach(p=>b.extend([p.lon,p.lat]));
-    const r=box.getBoundingClientRect();
-    const cam=map.cameraForBounds(b,{padding:{top:70,bottom:Math.min(110,r.height*.22),left:Math.min(60,r.width*.12),right:Math.min(70,r.width*.14)},maxZoom:14});
+    const cam=map.cameraForBounds(b,{padding:pad(),maxZoom:13.5});
     const dur=RM?0:2600;
     map.flyTo({...cam,duration:dur,curve:1.5,speed:1.1,essential:true});
     if(big||!d.legs.length)return;
     const legs=d.legs.map(curve),durs=d.legs.map(l=>legTime(l[2])*1.25),total=durs.reduce((a,b)=>a+b,0);
-    const start=performance.now()+dur*.8;
+    const start=performance.now()+dur+200,began=[];let settled=false;
     const step=now=>{
       if(my!==run)return;
       let t=now-start;const done=[];let cur=null;
       legs.forEach((L,j)=>{const p=Math.max(0,Math.min(1,t/durs[j]));t-=durs[j];if(j===0&&p>0)hit(d.legs[0][0]);
+        if(p>0&&!began[j]){began[j]=1;const ends=[L.pts[0],L.pts[48]];if(j>0&&!inView([...ends,L.pts[24]],.12))frame(L.pts,Math.min(1400,durs[j]*.6),13.5);}
         if(p>0){const e=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;const n=Math.floor(e*48)+1;done.push(feat([...L.pts.slice(0,n),qp(L.c,e)],d.legs[j][2]));
           if(p<1)cur={pos:qp(L.c,e),m:d.legs[j][2],c:L.c,e};else hit(d.legs[j][1]);}});
       map.getSource("today").setData(fc(done));moveVeh(cur);
-      if(now-start<total)raf=requestAnimationFrame(step);else moveVeh(null);
+      if(now-start<total)raf=requestAnimationFrame(step);else{moveVeh(null);if(!settled){settled=true;const np=NIGHTPLACE[d.night],last=d.legs[d.legs.length-1][1],k=np&&P[np]?np:last;
+        if(!userMoved&&P[k]&&k!=="home"){const z=Math.max(map.getZoom(),Math.min(12.5,map.getZoom()+1));map.easeTo({center:[P[k].lon,P[k].lat],zoom:d.legs.some(l=>l[2]==="plane")?Math.max(map.getZoom(),9):z,duration:RM?0:1600,easing:t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2});}
+        if(markers[k])markers[k].getElement().firstChild.classList.add("here");}}
     };
     raf=requestAnimationFrame(step);
   }
