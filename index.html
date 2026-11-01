@@ -168,7 +168,8 @@ tr.tot td{border:0;padding-top:8px;font-weight:900}
 .pin.hit{animation:pop .7s cubic-bezier(.3,1.6,.5,1)}
 @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.4)}100%{transform:scale(1)}}
 .plab{background:#fff;color:#24304f;border:2px solid #24304f;border-radius:999px;padding:1px 8px;font:700 11px var(--body);white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis}
-.veh{width:44px;height:44px;border-radius:50%;background:#fff;border:3px solid #24304f;display:grid;place-items:center;font-size:22px;box-shadow:0 6px 14px rgba(20,30,60,.35);pointer-events:none}
+.vehw{pointer-events:none;filter:drop-shadow(0 4px 8px rgba(20,30,60,.35))}
+.veh{width:44px;height:44px;box-sizing:border-box;border-radius:50%;background:#fff;border:3px solid #24304f;display:grid;place-items:center;font-size:22px;overflow:hidden;clip-path:circle(50%);transform:translateZ(0)}
 .veh svg{display:block}
 .maplibregl-popup-content{padding:0;border-radius:16px;overflow:hidden;border:3px solid #24304f;font-family:var(--body);color:#24304f}
 .maplibregl-popup-content img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}
@@ -179,9 +180,30 @@ tr.tot td{border:0;padding-top:8px;font-weight:900}
 .ph img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s}
 .ph:hover img{transform:scale(1.06)}
 .ph span{position:absolute;left:0;right:0;bottom:0;padding:14px 8px 5px;font:700 .74rem var(--body);background:linear-gradient(transparent,rgba(0,0,0,.65))}
+.ph{padding:0;cursor:pointer;font:inherit;width:100%}
+.ph i{position:absolute;top:6px;right:6px;font:normal 900 .62rem var(--body);letter-spacing:.06em;text-transform:uppercase;background:rgba(255,255,255,.92);color:#24304f;border-radius:999px;padding:2px 7px}
+.pin:focus-visible,.ph:focus-visible{outline:3px solid var(--sky);outline-offset:3px}
+.guide{position:fixed;inset:0;z-index:50;background:rgba(16,22,40,.55);display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));animation:fadein .2s}
+.guide[hidden]{display:none}
+@keyframes fadein{from{opacity:0}}
+.gcard{position:relative;width:min(520px,100%);max-height:100%;overflow:auto;background:var(--card);color:var(--ink);border:3px solid var(--ink);border-radius:24px;box-shadow:6px 6px 0 var(--ink);animation:rise .25s cubic-bezier(.2,1.2,.4,1)}
+@keyframes rise{from{transform:translateY(20px);opacity:0}}
+.gbody img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;border-bottom:3px solid var(--ink)}
+.gin{padding:16px 20px 18px}
+.gin h3{font:400 1.35rem var(--display);margin:0 0 6px;text-wrap:balance}
+.gin h4{margin:14px 0 6px;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--torii)}
+.gin ul{margin:0;padding-left:20px;display:grid;gap:5px}
+.gin ul.eat{list-style:"🍜  ";}
+.gin ul.eat b{display:block}
+.gtip{margin:14px 0 0;font-weight:700}
+.gnote{margin:10px 0 0;font-size:.78rem;color:var(--muted)}
+.gcred{display:block;margin-top:8px;font-size:.72rem;color:var(--muted)}
+.gclose{position:absolute;top:10px;right:10px;z-index:2;width:36px;height:36px;border-radius:50%;border:2px solid var(--ink);background:var(--card);color:var(--ink);font-size:1rem;cursor:pointer}
+@media (prefers-reduced-motion:reduce){.guide,.gcard{animation:none}}
 .credit{margin:-6px 0 12px;font-size:.7rem;color:var(--muted)}
 </style>
 
+<div id="guide" class="guide" hidden role="dialog" aria-modal="true" aria-label="Place guide"><div class="gcard"><button class="gclose" type="button" aria-label="Close">✕</button><div class="gbody"></div></div></div>
 </head>
 <body>
 <div class="app">
@@ -749,7 +771,7 @@ function updateCost(){
   renderPlan(c);
 }
 function strip(keys){if(!PHOTOS_ON)return"";const ks=keys.filter(k=>photo(k)&&!["hnd","home","tokyost","shinjuku","nagoya","shinosaka"].includes(k)).slice(0,4);if(!ks.length)return"";
-  return`<div class="strip">${ks.map(k=>{const p=photo(k);return`<a class="ph" href="${p.pg}" target="_blank" rel="noopener" title="Photo: ${esc(p.by)} · ${esc(p.lic)}"><img loading="lazy" src="${p.url}" alt="${esc(P[k].n)}"><span>${esc(P[k].n)}</span></a>`;}).join("")}</div><p class="credit">Photos: ${[...new Set(ks.map(k=>photo(k).by))].map(esc).join(", ")} · Wikimedia Commons</p>`;}
+  return`<div class="strip">${ks.map(k=>{const p=photo(k);return`<button type="button" class="ph" data-guide="${k}" aria-label="${esc(P[k].n)}: things to do and where to eat"><img loading="lazy" src="${p.url}" alt=""><span>${esc(P[k].n)}</span><i>Guide</i></button>`;}).join("")}</div><p class="credit">Photos: ${[...new Set(ks.map(k=>photo(k).by))].map(esc).join(", ")} · Wikimedia Commons</p>`;}
 function renderCard(){
   const d=DAYS[day],last=DAYS.length-1,c=costOf(cfg,DAYS);
   $("badge").textContent=d.overview?"Trip overview":`Day ${day} · ${d.where}`;
@@ -811,6 +833,8 @@ document.addEventListener("click",e=>{
   const a=e.target.closest("[data-idea]");
   if(a){const id=a.dataset.idea;cfg.ideas.has(id)?cfg.ideas.delete(id):cfg.ideas.add(id);rebuild();return;}
   const t=e.target.closest("[data-tab]");if(t)showTab(t.dataset.tab);
+  const gd=e.target.closest("[data-guide]");if(gd){openGuide(gd.dataset.guide);return;}
+  if(e.target.id==="guide"||e.target.closest(".gclose"))closeGuide();
 });
 function showTab(n){["days","plan","disney","ideas"].forEach(k=>{$("v-"+k).hidden=k!==n;$("t-"+k).setAttribute("aria-selected",k===n);});
   if(n!=="days")$("v-"+n).scrollTop=0;}
@@ -830,7 +854,7 @@ fsb.onclick=async()=>{
   else{setFocus(false);try{if(document.fullscreenElement)await document.exitFullscreen();}catch(e){}}
 };
 document.addEventListener("fullscreenchange",()=>{if(!document.fullscreenElement)setFocus(false);});
-addEventListener("keydown",e=>{if(e.key==="ArrowRight")go(day+1);if(e.key==="ArrowLeft")go(day-1);});
+addEventListener("keydown",e=>{if(e.key==="Escape"){closeGuide();return;}if(!$("guide").hidden)return;if(e.key==="ArrowRight")go(day+1);if(e.key==="ArrowLeft")go(day-1);});
 let sx=null;cv.addEventListener("pointerdown",e=>sx=e.clientX);
 cv.addEventListener("pointerup",e=>{if(sx!==null&&Math.abs(e.clientX-sx)>40)go(day+(e.clientX<sx?1:-1));sx=null;});
 
@@ -879,18 +903,18 @@ var TM=(()=>{
   function popupHTML(k){const ph=photo(k,960);
     return`${ph?`<img src="${ph.url}" alt="${esc(P[k].n)}">`:""}<div class="pp"><b>${esc(P[k].n)}</b>${ph?`<a href="${ph.pg}" target="_blank" rel="noopener">Photo: ${esc(ph.by)} · ${esc(ph.lic)}</a>`:""}</div>`;}
   function addPin(k){
-    const el=pinEl(k,P[k].hotel);const m=new maplibregl.Marker({element:el,anchor:"center"}).setLngLat([P[k].lon,P[k].lat])
-      .setPopup(new maplibregl.Popup({offset:28,maxWidth:"280px",closeButton:true}).setHTML(popupHTML(k))).addTo(map);
+    const el=pinEl(k,P[k].hotel);el.firstChild.addEventListener("click",e=>{e.stopPropagation();openGuide(k);});
+    const m=new maplibregl.Marker({element:el,anchor:"center"}).setLngLat([P[k].lon,P[k].lat]).addTo(map);
     markers[k]=m;
   }
   function moveVeh(cur){
     if(!cur){if(veh){veh.remove();veh=null;}return;}
-    if(!veh||veh._m!==cur.m){if(veh)veh.remove();const el=document.createElement("div");el.className="veh";
-      el.innerHTML=cur.m==="plane"?`<svg viewBox="-16 -14 32 28" width="30" height="26"><path d="M13 0Q11-2.5 6-2.5H1L-4-12H-8L-5-2.5H-10L-13-7H-15L-13 0-15 7H-13L-10 2.5H-5L-8 12H-4L1 2.5H6Q11 2.5 13 0Z" fill="${C["--sky"]}" stroke="${C["--ink"]}" stroke-width="1.5"/></svg>`:`<span>${M[cur.m]}</span>`;
+    if(!veh||veh._m!==cur.m){if(veh)veh.remove();const el=document.createElement("div");el.className="vehw";
+      el.innerHTML='<div class="veh">'+(cur.m==="plane"?`<svg viewBox="-16 -14 32 28" width="30" height="26"><path d="M13 0Q11-2.5 6-2.5H1L-4-12H-8L-5-2.5H-10L-13-7H-15L-13 0-15 7H-13L-10 2.5H-5L-8 12H-4L1 2.5H6Q11 2.5 13 0Z" fill="${C["--sky"]}" stroke="${C["--ink"]}" stroke-width="1.5"/></svg>`:`<span>${M[cur.m]}</span>`)+'</div>';
       veh=new maplibregl.Marker({element:el,anchor:"center"}).setLngLat(cur.pos).addTo(map);veh._m=cur.m;}
     veh.setLngLat(cur.pos);
     if(cur.m==="plane"){const a=map.project(qp(cur.c,Math.max(0,cur.e-.01))),b=map.project(qp(cur.c,Math.min(1,cur.e+.01)));
-      veh.getElement().firstChild.style.transform=`rotate(${Math.atan2(b.y-a.y,b.x-a.x)}rad)`;}
+      veh.getElement().firstChild.firstChild.style.transform=`rotate(${Math.atan2(b.y-a.y,b.x-a.x)}rad)`;}
   }
   function hit(k){const m=markers[k];if(!m)return;const el=m.getElement().firstChild;if(el.classList.contains("hit"))return;el.classList.add("hit");}
   function show(i){
@@ -928,6 +952,99 @@ var TM=(()=>{
   }
   return{show,map};
 })();
+
+/* ---------- place guides: things to do + where to eat ---------- */
+const GUIDE={
+ okura:{do:["Walk 10 minutes to teamLab Borderless at Azabudai Hills, a huge digital-art museum with no set path","Toranomon Hills: rooftop gardens and the food hall at Toranomon Yokocho","Tokyo Tower is a 15-minute walk away"],
+  eat:[["All Day Dining Orchid (in the hotel)","The Okura's famous French toast at breakfast. Order it at least once."],["Toranomon Yokocho","Food hall with 26 counters: ramen, tempura, gyoza. Easy with kids."]],tip:"Ask the concierge to book restaurants. They're excellent with families."},
+ hilton:{do:["Free Disney Resort Cruiser bus to both parks","Ikspiari mall next to Maihama Station for rainy afternoons","Kasai Rinkai Park next door has a giant Ferris wheel and an aquarium"],
+  eat:[["Ikspiari restaurants","Dozens of casual spots a few minutes away"],["Hotel buffet (Forest Garden)","Big Japanese and Western buffet that's easy with picky eaters"]],tip:"Ask for a Happy Magic Room with bunk beds."},
+ city:{do:["Steps from Tsukiji Outer Market for early breakfasts","Hakuhinkan Toy Park in Ginza: four floors of toys","Itoya: 12 floors of stationery and craft supplies"],
+  eat:[["Ginza Kagari","Creamy chicken ramen. Expect a short line."],["Tsukiji Outer Market stalls","Tamagoyaki on a stick, tuna bowls, grilled scallops"]],tip:"Rooms are small, so send big suitcases ahead with luggage forwarding."},
+ apt:{do:["Do laundry midweek; it's a lifesaver with three kids","Shinjuku Gyoen garden for running around","The Godzilla head on top of Hotel Gracery in Kabukicho"],
+  eat:[["Depachika (department-store food halls)","Bento, sushi and pastries to eat at the apartment"],["Fuunji","Legendary tsukemen dipping noodles near Shinjuku Station"]],tip:"Konbini breakfasts (onigiri, egg sandwiches, yogurt) make easy mornings."},
+ dhotel:{do:["Walk or ride straight to the parks; check the early-entry time on your key card","The Resort Line monorail has Mickey-shaped windows and straps","Bon Voyage, the giant Disney store at Maihama Station"],
+  eat:[["Hotel character dining","Book through the Tokyo Disney Resort app as soon as reservations open"],["Ikspiari","Casual food and convenience stores by the station"]],tip:"Order Disney hotel breakfast ahead or grab bakery items the night before. Rope-drop mornings start early."},
+ hnd:{do:["Edo Market Place (Terminal 3, level 4): an old-Tokyo shopping street","The open-air observation deck to watch planes","Get Suica or PASMO IC cards for the trains"],
+  eat:[["Terminal 3 food court","Ramen, tonkatsu and sushi before you leave the airport"],["Konbini","Grab onigiri and drinks for the ride to the hotel"]],tip:"Pre-book a large taxi or private van for 5 people plus luggage."},
+ ikeb:{do:["Pokémon Center Mega Tokyo, on the 2nd floor of Sunshine City Alpa","Sunshine Aquarium on the roof, where penguins seem to fly overhead","Namja Town indoor theme park in the same building"],
+  eat:[["Pikachu Sweets (next to the Pokémon Center)","Pokémon-shaped desserts and drinks"],["Mutekiya","Famous rich tonkotsu ramen; the line moves quickly"]],tip:"Go on a weekday morning. Weekends are packed."},
+ akiba:{do:["Super Potato: three floors of retro games and a tiny arcade","GiGO and Taito Station arcades for claw machines and rhythm games","Radio Kaikan and Mandarake for figures and cards"],
+  eat:[["Go! Go! Curry","Hearty katsu curry, quick and kid-approved"],["Gyukatsu Motomura","Crispy beef cutlets you finish on a hot stone"]],tip:"Main street is closed to cars on Sunday afternoons."},
+ tdl:{do:["Enchanted Tale of Beauty and the Beast first thing","Pooh's Hunny Hunt, which is unique to Tokyo","Electrical Parade Dreamlights at night"],
+  eat:[["Queen of Hearts Banquet Hall","Wonderland-themed buffet-style dinner"],["Popcorn carts","Each cart has its own flavor (honey, curry, soy-butter); refill the souvenir bucket"]],tip:"Buy Premier Access in the app right after you enter. Popular rides sell out."},
+ tds:{do:["Journey to the Center of the Earth and Raging Spirits for your coaster kid","Fantasy Springs: Frozen, Tangled and Peter Pan","Believe! Sea of Dreams harbor show at night"],
+  eat:[["Gyoza dog at Nautilus Galley","The park's most famous snack"],["Magellan's","Sit-down dinner in a grand explorer's hall; book ahead"]],tip:"DisneySea is huge. Do one side of the harbor in the morning and the other after lunch."},
+ shinjuku:{do:["Board the Fuji Excursion train from JR Shinjuku","Godzilla head on Hotel Gracery","Shinjuku Gyoen garden"],
+  eat:[["Ekiben from the station","Train bento boxes for breakfast on the way to Fuji"],["Fuunji","Thick tsukemen noodles, a local favorite"]],tip:"Fuji Excursion seats sell out. Book them a month ahead."},
+ fujiq:{do:["Fujiyama, Takabisha, Eejanaika and Do-Dodonpa coasters","Thomas Land for younger kids","Fujiyama Tower walk for Fuji views"],
+  eat:[["Hōtō Fudō (Kawaguchiko)","Yamanashi's local hōtō noodle stew, served in a cloud-shaped building"],["Park food courts","Quick bites between Zekkyo Priority slots"]],tip:"Coasters close in strong wind, so check the app before buying passes."},
+ tsukiji:{do:["Wander the outer market lanes before 10 a.m.","Tsukiji Hongwanji temple's unusual Indian-style building","Walk on to Ginza for shopping"],
+  eat:[["Tsukiji Yamachō","Sweet tamagoyaki omelet on a stick"],["Sushi Zanmai (main store)","Kid-friendly sushi, open almost 24 hours"]],tip:"Many stalls close by early afternoon and on Wednesdays and Sundays."},
+ nakano:{do:["Mandarake's dozens of small shops on the 2nd–4th floors","Vintage toys and trading cards","Nakano Sun Mall covered arcade"],
+  eat:[["Daily Chico (basement)","The famous 8-flavor tower of soft serve"],["Aoba Nakano","Classic double-soup ramen"]],tip:"Most shops open around noon, so do Tsukiji first."},
+ ginza:{do:["Hakuhinkan Toy Park: four floors of toys","Itoya stationery","Ginza is car-free on weekend afternoons"],
+  eat:[["Ginza Kagari","Silky chicken ramen"],["Depachika at Mitsukoshi","Beautiful sweets and bento"]],tip:"Visit Wako's clock tower corner at dusk for photos."},
+ tokyost:{do:["Tokyo Character Street (basement) for Pokémon, Ghibli and Tomica shops","Tokyo Ramen Street","The restored red-brick Marunouchi building"],
+  eat:[["Ekibenya Matsuri","Hundreds of regional bento for the bullet train"],["Tokyo Ramen Street","Eight famous ramen shops in one alley"]],tip:"Buy ekiben before boarding. Shinkansen meals are part of the fun."},
+ nagoya:{do:["Platform kishimen (flat noodle) stands","JR Gate Tower's sky street views","The Meitetsu bus terminal for the Nagashima shuttle"],
+  eat:[["Yabaton","Nagoya's famous miso-katsu"],["Atsuta Hōraiken","Hitsumabushi grilled eel over rice, eaten three ways"]],tip:"Nagoya food is distinctive. Try at least one local dish."},
+ spa:{do:["Steel Dragon 2000 and Hakugei","Nabana no Sato winter illuminations nearby (shuttle buses run)","Mitsui Outlet Park next door"],
+  eat:[["Park food courts","Japanese and Western quick service"],["Outlet food court","More choice right outside the gate"]],tip:"Steel Dragon closes in high wind. Ride it early."},
+ nihom:{do:["Pokémon Center Tokyo DX and Pokémon Cafe (Takashimaya)","Nihonbashi bridge, the zero point of Japan's roads","Mitsukoshi's grand old department store"],
+  eat:[["Pokémon Cafe","Character plates and a Pikachu visit; reserve 31 days ahead"],["Nihonbashi Tamai","Anago (sea eel) rice boxes, a local classic"]],tip:"Pokémon Cafe reservations open 31 days ahead at 6 p.m. Japan time."},
+ changi:{do:["Rain Vortex light and sound shows in the evening","Canopy Park: sky nets, mazes and slides","Butterfly garden and koi ponds in the terminals"],
+  eat:[["Jumbo Seafood (Jewel)","Singapore chili crab with mantou buns"],["Hawker food at the airport","Laksa, chicken rice and kaya toast"]],tip:"Canopy Park tickets are cheaper online."},
+ gardens:{do:["Cloud Forest and Flower Dome conservatories","OCBC Skyway walk between the Supertrees","Children's Garden water play (free; closed Mondays)"],
+  eat:[["Satay by the Bay","Hawker centre inside the gardens"],["Lau Pa Sat","Evening satay street downtown"]],tip:"Garden Rhapsody light show runs at 7:45 and 8:45 p.m."},
+ tower:{do:["Main Deck views, and the glass floor","Zojoji Temple next door with rows of little Jizo statues","Shiba Park lawns"],
+  eat:[["Tokyo Tower Foot Town","Casual food court under the tower"],["Tofuya Ukai","Elegant tofu feast in a garden beneath the tower; book ahead"]],tip:"The tower lights up at sunset."},
+ odaiba:{do:["The life-size Unicorn Gundam statue at DiverCity","Tokyo Joypolis indoor arcade park","Beach walk with Rainbow Bridge views"],
+  eat:[["DiverCity food court","Lots of choice for picky eaters"],["Aqua City Ramen Kokugikan","Six ramen shops from around Japan"]],tip:"Ride the driverless Yurikamome train in the front car."},
+ yoyogi:{do:["Meiji Shrine forest walk","Picnic and frisbee in Yoyogi Park","Takeshita Street in Harajuku for crepes and kawaii shops"],
+  eat:[["Marion Crêpes (Takeshita Street)","Harajuku's classic crepes since 1976"],["Depachika picnic","Pick up food on the way"]],tip:"Sunday afternoons bring dancers and performers to the park entrance."},
+ teamlab:{do:["Wade through knee-deep water rooms","The floating flower garden","Allow about 2 hours"],
+  eat:[["Toyosu Market","Sushi breakfast in the market buildings"],["Urban Park Toyosu (food court)","Easy lunch after"]],tip:"Wear shorts or roll-up pants; you'll be barefoot in water."},
+ mitaka:{do:["Ghibli Museum short film and rooftop Robot Soldier","Inokashira Park swan boats next door","Kichijoji shopping streets"],
+  eat:[["Straw Hat Café (in the museum)","Simple, cozy lunch"],["Satou (Kichijoji)","Famous menchi-katsu croquettes"]],tip:"Tickets sell out on the 10th of the prior month. Book right away."},
+ shibuya:{do:["Shibuya Sky at sunset","Nintendo Tokyo and Pokémon Center Shibuya (Parco)","Hachiko statue and the scramble crossing"],
+  eat:[["Genki Sushi","Order on a tablet; plates arrive on a mini bullet train"],["Ichiran","Solo-booth tonkotsu ramen"]],tip:"Watch the crossing from the Starbucks or Magnet rooftop."},
+ pokepark:{do:["Forest trail with 600+ Pokémon figures","Pokémon town shops and photo spots","The rest of Yomiuriland's rides"],
+  eat:[["Park food stands","Themed snacks inside"],["Yomiuriland restaurants","More choice outside the Pokémon area"]],tip:"Tickets are sold by lottery months ahead."},
+ ryokan:{do:["Private family onsen bath","Wear the yukata robes to dinner","Kachi Kachi Ropeway for Fuji views"],
+  eat:[["Kaiseki dinner at the ryokan","A many-course seasonal feast"],["Hōtō Fudō","Hōtō noodle stew"]],tip:"Tell the ryokan about kids' food preferences when booking."},
+ chureito:{do:["Climb the 398 steps to the pagoda viewpoint","Arakura Sengen Shrine","Fujiyoshida's retro shopping street"],
+  eat:[["Yoshida udon shops","Chewy local udon"],["Fujiyoshida cafés","Coffee with a Fuji view"]],tip:"Go early. Clouds often cover Fuji by late morning."},
+ oshino:{do:["Spring-fed ponds so clear you can see the bottom","Thatched-roof village lanes","Fuji views over the water"],
+  eat:[["Grilled kusa-mochi stalls","Warm mochi with sweet bean paste"],["Soba shops","Made with the spring water"]],tip:"It's small: plan about 1 hour."},
+ nagoyaH:{do:["JR Gate Tower sky street at night","Nagoya Castle if you have the morning","Osu shopping arcade"],
+  eat:[["Sekai no Yamachan","Peppery tebasaki chicken wings"],["Yabaton","Miso-katsu"]],tip:"Hotels by the station make an early start easy."},
+ scmaglev:{do:["Real Shinkansen and maglev trains you can board","Train driver simulator (reserve on arrival)","Giant model railway diorama"],
+  eat:[["Museum café","Shinkansen-shaped bento boxes"],["Kinjofuto food stands","Quick lunch nearby"]],tip:"Simulator slots go fast. Head there first."},
+ ghibliP:{do:["Ghibli's Grand Warehouse","Satsuki and Mei's house","Dondoko Forest and Mononoke Village"],
+  eat:[["Park cafés","Ghibli-themed food"],["Expo Park restaurants","Simple lunch options"]],tip:"Tickets are by area. Pick the Grand Warehouse for younger kids."},
+ osakaH:{do:["Dotonbori neon and the Glico running man","Kuromon Market","Shinsekai and Tsutenkaku tower"],
+  eat:[["Kukuru (Dotonbori)","Octopus takoyaki balls"],["Mizuno","Fluffy Osaka okonomiyaki"]],tip:"Osaka is a food city. Go hungry."},
+ usj:{do:["Super Nintendo World: Mario Kart and Yoshi's Adventure","Wizarding World of Harry Potter","Minion Park"],
+  eat:[["Kinopio's Café","Mushroom Kingdom food in Nintendo World"],["Park snack stands","Character-shaped buns and churros"]],tip:"An Express Pass with timed Nintendo World entry is the safest bet."},
+ kamakura:{do:["Step inside the Great Buddha","Hase-dera temple and its cave","Komachi-dori snack street"],
+  eat:[["Shirasu-don shops","Whitebait rice bowls, a local specialty"],["Komachi-dori snacks","Purple sweet potato soft serve"]],tip:"Ride the Enoden train with the beach on one side."},
+ enoshima:{do:["Iwaya Caves with candle-lit paths","Sea Candle lighthouse","Tide pools at the far end"],
+  eat:[["Enoshima shirasu-don","Fresh whitebait bowls"],["Tako senbei","Whole octopus pressed into a giant cracker"]],tip:"The island is hilly. Paid escalators help little legs."},
+ zoo:{do:["Breakfast in the Wild with orangutans","Rainforest KidzWorld water play (bring swimsuits)","River Wonders boat ride next door"],
+  eat:[["Ah Meng Restaurant","Local dishes inside the zoo"],["KFC & food court","Easy fallbacks"]],tip:"Go early. It gets hot by noon."}
+};
+function guideFor(k){if(k==="okura")return GUIDE[cfg.hotel];return GUIDE[k]||null;}
+function openGuide(k){
+  const g=guideFor(k),ph=photo(k,960),name=P[k].n;const box=$("guide");
+  box.querySelector(".gbody").innerHTML=`${ph?`<img src="${ph.url}" alt="${esc(name)}">`:""}<div class="gin"><h3>${esc(name)}</h3>
+   ${g?`<h4>Things to do</h4><ul>${g.do.map(x=>`<li>${esc(x)}</li>`).join("")}</ul><h4>Where to eat</h4><ul class="eat">${g.eat.map(e=>`<li><b>${esc(e[0])}</b>${esc(e[1])}</li>`).join("")}</ul>
+   <p class="gtip">📌 ${esc(g.tip)}</p>`:`<p>A stop along the way.</p>`}
+   <p class="gnote">Check hours before you go. Restaurants change, and many close one day a week.</p>
+   ${ph?`<a class="gcred" href="${ph.pg}" target="_blank" rel="noopener">Photo: ${esc(ph.by)} · ${esc(ph.lic)} · Wikimedia Commons</a>`:""}</div>`;
+  box.hidden=false;box.querySelector(".gclose").focus();
+}
+function closeGuide(){$("guide").hidden=true;}
 
 cam=dayCam(0);startDay(0,true);updateCost();if(!TM)requestAnimationFrame(frame);
 </script>
