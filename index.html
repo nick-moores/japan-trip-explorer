@@ -261,6 +261,22 @@ table.side th.me{color:var(--ink)}
 .kcmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:10px}
 .kcmp>div{background:var(--bg);border:2px solid var(--line);border-radius:14px;padding:10px 12px}
 .kcmp h4{margin:0 0 4px;font:400 1rem var(--display)}.kcmp ul{margin:0;padding-left:18px;display:grid;gap:3px;font-size:.9rem}
+.howbtn{margin-left:auto;order:3;border:1.5px dashed var(--line);background:none;color:var(--muted);border-radius:999px;padding:3px 10px;font:700 .75rem var(--body);cursor:pointer;letter-spacing:.02em}
+.howbtn:hover{color:var(--ink);border-color:var(--ink)}
+header .sub{order:2}
+.how .gcard{width:min(640px,100%)}
+.eyebrow{margin:0 0 2px;font-size:.72rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--torii)}
+.how p{margin:8px 0}
+.how h4{font:400 1.02rem var(--display)!important;letter-spacing:0!important;text-transform:none!important;color:var(--ink)!important;margin:18px 0 4px!important}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;margin:12px 0}
+.stats div{background:var(--bg);border:2px solid var(--line);border-radius:12px;padding:8px 10px;display:grid}
+.stats b{font:400 1.3rem var(--display);color:var(--torii);font-variant-numeric:tabular-nums}.stats span{font-size:.76rem;color:var(--muted);font-weight:700}
+#bz{width:100%;height:auto;display:block;background:var(--bg);border:2px solid var(--line);border-radius:14px;touch-action:none;margin:6px 0}
+.how pre{background:#1d2440;color:#e9edf8;border-radius:12px;padding:10px 12px;overflow-x:auto;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;margin:6px 0}
+.how code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em}
+.how li code{background:var(--bg);padding:1px 5px;border-radius:5px}
+.hlist{padding-left:20px;display:grid;gap:8px}
+.how a{color:var(--sky)}
 .credit{margin:-6px 0 12px;font-size:.7rem;color:var(--muted)}
 </style>
 
@@ -272,11 +288,13 @@ table.side th.me{color:var(--ink)}
   <div id="chatsugs" class="chatsugs"><button type="button">Where are we staying the night of Fuji-Q?</button><button type="button">Is any day too long for the kids?</button><button type="button">Where should we eat near Nakano Broadway?</button></div>
   <form id="chatform"><input id="chatq" type="text" autocomplete="off" placeholder="Ask a question…" aria-label="Your question"><button id="chatsend" type="submit">Send</button></form>
 </section>
+<div id="how" class="guide how" hidden role="dialog" aria-modal="true" aria-label="How it's made"><div class="gcard"><button class="gclose" type="button" aria-label="Close">✕</button><div class="hbody"></div></div></div>
 </head>
 <body>
 <div class="app">
   <header>
     <h1>Japan <span>Trip</span> Explorer</h1>
+    <button id="howbtn" class="howbtn" type="button">&lt;/&gt; How it's made</button>
     <div class="sub" id="sub">5 travelers · Tokyo → Fuji → Nagoya → Singapore</div>
   </header>
   <div class="stage">
@@ -1099,6 +1117,8 @@ document.addEventListener("click",e=>{
   if(a){const id=a.dataset.idea;cfg.ideas.has(id)?cfg.ideas.delete(id):cfg.ideas.add(id);rebuild();return;}
   const t=e.target.closest("[data-tab]");if(t)showTab(t.dataset.tab);
   const gd=e.target.closest("[data-guide]");if(gd){openGuide(gd.dataset.guide);return;}
+  if(e.target.closest("#howbtn")){openHow();return;}
+  if(e.target.id==="how"||e.target.closest("#how .gclose")){$("how").hidden=true;return;}
   if(e.target.id==="guide"||e.target.closest(".gclose"))closeGuide();
 });
 function showTab(n){["days","plan","when","disney","ideas"].forEach(k=>{$("v-"+k).hidden=k!==n;$("t-"+k).setAttribute("aria-selected",k===n);});
@@ -1119,7 +1139,7 @@ fsb.onclick=async()=>{
   else{setFocus(false);try{if(document.fullscreenElement)await document.exitFullscreen();}catch(e){}}
 };
 document.addEventListener("fullscreenchange",()=>{if(!document.fullscreenElement)setFocus(false);});
-addEventListener("keydown",e=>{if(e.target.closest&&e.target.closest("input,textarea"))return;if(e.key==="Escape"){closeGuide();return;}if(!$("guide").hidden)return;if(e.key==="ArrowRight")go(day+1);if(e.key==="ArrowLeft")go(day-1);});
+addEventListener("keydown",e=>{if(e.target.closest&&e.target.closest("input,textarea"))return;if(e.key==="Escape"){closeGuide();$("how").hidden=true;return;}if(!$("guide").hidden||!$("how").hidden)return;if(e.key==="ArrowRight")go(day+1);if(e.key==="ArrowLeft")go(day-1);});
 let sx=null;cv.addEventListener("pointerdown",e=>sx=e.clientX);
 cv.addEventListener("pointerup",e=>{if(sx!==null&&Math.abs(e.clientX-sx)>40)go(day+(e.clientX<sx?1:-1));sx=null;});
 
@@ -1424,6 +1444,66 @@ $("askbtn").onclick=()=>openChat($("chat").hidden);
 $("chatx").onclick=()=>openChat(false);
 $("chatform").addEventListener("submit",e=>{e.preventDefault();if(CHAT.locked)unlock($("chatq").value);else ask($("chatq").value);});
 $("chatsugs").addEventListener("click",e=>{const b=e.target.closest("button");if(b&&!CHAT.locked)ask(b.textContent);});
+
+/* ---------- how it's made ---------- */
+function openHow(){
+  const site=!!PHOTOS_ON,nIdeas=IDEAS.length,nPhotos=Object.keys(PHOTOS).length,nGuides=Object.keys(GUIDE).length,nPlaces=Object.keys(P).length;
+  const box=$("how");
+  box.querySelector(".hbody").innerHTML=`<div class="gin">
+  <p class="eyebrow">Under the hood</p><h3>How the Japan Trip Explorer works</h3>
+  <p>No magic: it's one web page made of three ingredients every website uses. <b>HTML</b> is the skeleton, <b>CSS</b> is the paint and clothes, and <b>JavaScript</b> is the brain that makes things move and react.</p>
+  <div class="stats"><div><b>${nPlaces}</b><span>places on the map</span></div><div><b>${DAYS.length-1}</b><span>days in your plan</span></div><div><b>${nPhotos}</b><span>photos</span></div><div><b>${nGuides}</b><span>place guides</span></div><div><b>~1,100</b><span>lines of JavaScript</span></div><div><b>0</b><span>frameworks</span></div></div>
+
+  <h4>🛩️ Try it: how the plane knows where to fly</h4>
+  <p>Every route is a <b>Bézier curve</b>, the same math used in drawing apps and fonts. It takes a start, an end and one invisible "pull" point that bends the path. Drag the orange dot.</p>
+  <svg id="bz" viewBox="0 0 320 170" role="img" aria-label="Interactive curve: drag the control point to bend the flight path">
+   <path id="bzl" fill="none" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="4 4"/>
+   <path id="bzp" fill="none" stroke="var(--sky)" stroke-width="4" stroke-linecap="round"/>
+   <circle cx="40" cy="130" r="9" fill="var(--torii)"/><text x="40" y="158" text-anchor="middle" font-size="11" fill="var(--ink)" font-weight="700">Tokyo</text>
+   <circle cx="280" cy="130" r="9" fill="var(--matcha)"/><text x="280" y="158" text-anchor="middle" font-size="11" fill="var(--ink)" font-weight="700">Singapore</text>
+   <text id="bzplane" font-size="20" text-anchor="middle" dominant-baseline="middle">✈️</text>
+   <circle id="bzc" cx="160" cy="30" r="11" fill="var(--gold)" stroke="var(--ink)" stroke-width="2" style="cursor:grab"/>
+  </svg>
+  <p class="note">This is the actual function moving the plane right now, read live from the page:</p>
+  <pre><code>${esc(qp.toString())}</code></pre>
+  <p class="note">At t = 0 you're at the start, at t = 1 you've arrived, and every number in between is a spot along the curve. Redraw it 60 times a second and it looks like flying.</p>
+
+  <h4>🧩 The pieces</h4>
+  <ul class="hlist">
+   <li><b>The map.</b> ${site?`<a href="https://maplibre.org/" target="_blank" rel="noopener">MapLibre GL JS</a>, an open-source map engine that draws with your device's graphics chip (WebGL). The map data comes from <a href="https://openfreemap.org/" target="_blank" rel="noopener">OpenFreeMap</a>, built from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a>, a world map made by volunteers. The smooth glide between days is MapLibre's <code>flyTo()</code>, which zooms out, pans and zooms back in along one path.`:`A hand-drawn map on an HTML <code>&lt;canvas&gt;</code>, using real coastlines from the <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a> dataset, simplified to keep the file small.`}</li>
+   <li><b>The trip engine.</b> One function, <code>build()</code>, turns your choices (pace, hotels, season, ideas) into a list of days. Another, <code>transfer()</code>, works out how to get between places through train hubs like Tokyo Station, Nagoya and Kyoto. Change a setting and the whole trip is rebuilt in a few milliseconds.</li>
+   <li><b>The money math.</b> <code>costOf()</code> counts nights in each kind of hotel, multiplies by nightly rates and the season's price factors, and adds tickets, trains and food per day. The number in the corner counts up with an easing animation.</li>
+   <li><b>Animation.</b> Everything moves with <code>requestAnimationFrame</code>, the browser's "draw the next frame" timer, plus easing curves so motion speeds up and slows down like real objects.</li>
+   <li><b>Photos.</b> ${nPhotos} freely licensed photos from <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener">Wikimedia Commons</a>, loaded straight from Wikimedia and credited to each photographer.</li>
+   <li><b>Weather.</b> Real 30-year averages from the Japan Meteorological Agency, drawn as an SVG chart (shapes described in code, so they stay sharp at any size).</li>
+   <li><b>The chat.</b> ${site?`A tiny serverless function on Vercel (<code>/api/chat</code>) sends your question plus the current plan to Claude Haiku through the <a href="https://platform.claude.com/docs/en/api/messages" target="_blank" rel="noopener">Claude API</a>. The secret API key lives on the server, never in the page, and a family code keeps strangers out.`:`In the Claude version, the page uses Claude's built-in "ask Claude" feature for artifacts.`}</li>
+   <li><b>Remembering your choices.</b> Your settings are saved in <code>localStorage</code>, a little storage box each browser keeps per website, so each device keeps its own plan.</li>
+   <li><b>Looks.</b> Fonts from Google Fonts (Mochiy Pop One and Zen Maru Gothic). Every color is a CSS variable, which is how dark mode swaps the whole palette at once.</li>
+   <li><b>Hosting.</b> ${site?`The code lives on GitHub. Every time a change is pushed, Vercel rebuilds and publishes the site automatically, usually in under a minute.`:`This copy is a Claude artifact; the full version lives on GitHub and Vercel.`}</li>
+  </ul>
+
+  <h4>🛠️ How it was built</h4>
+  <p>Dad and Claude built it together in a conversation, one request at a time: "add Disney hotels", "make the zoom smoother", "the plane looks weird". Claude wrote and tested the code; Dad decided what it should do and how it should feel. No framework like React, just the web platform itself, which can do a lot more than most people think.</p>
+  <p class="note">Want to see everything? Right-click the page and choose "View Page Source".</p>
+  </div>`;
+  box.hidden=false;box.querySelector(".gclose").focus();bezierDemo();
+}
+function bezierDemo(){
+  const svg=$("bz"),c=$("bzc"),pth=$("bzp"),ln=$("bzl"),pl=$("bzplane");if(!svg)return;
+  const A=[40,130],B=[280,130];let C=[160,30],t0=performance.now(),drag=false;
+  const draw=()=>{pth.setAttribute("d",`M${A} Q${C} ${B}`);ln.setAttribute("d",`M${A} L${C} L${B}`);c.setAttribute("cx",C[0]);c.setAttribute("cy",C[1]);};
+  const pt=e=>{const r=svg.getBoundingClientRect();return[Math.max(10,Math.min(310,(e.clientX-r.left)/r.width*320)),Math.max(10,Math.min(160,(e.clientY-r.top)/r.height*170))];};
+  c.addEventListener("pointerdown",e=>{drag=true;c.setPointerCapture(e.pointerId);c.style.cursor="grabbing";});
+  c.addEventListener("pointermove",e=>{if(drag){C=pt(e);draw();}});
+  c.addEventListener("pointerup",()=>{drag=false;c.style.cursor="grab";});
+  draw();
+  const tick=now=>{if($("how").hidden)return;const t=((now-t0)/2600)%1,u=1-t;
+    const x=u*u*A[0]+2*u*t*C[0]+t*t*B[0],y=u*u*A[1]+2*u*t*C[1]+t*t*B[1];
+    const dx=2*u*(C[0]-A[0])+2*t*(B[0]-C[0]),dy=2*u*(C[1]-A[1])+2*t*(B[1]-C[1]);
+    pl.setAttribute("x",x);pl.setAttribute("y",y);pl.setAttribute("transform",`rotate(${Math.atan2(dy,dx)*180/Math.PI+45} ${x} ${y})`);
+    requestAnimationFrame(tick);};
+  requestAnimationFrame(tick);
+}
 
 cam=dayCam(0);startDay(0,true);updateCost();if(!TM)requestAnimationFrame(frame);
 </script>
