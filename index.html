@@ -21,7 +21,7 @@
   --sea:#cfe6ef; --sea-line:#b5d6e3; --land:#fff4ec; --land-edge:#f0b9a6;
   --ink:#24304f; --muted:#5d6886; --card:#ffffff; --line:#ecdcd3;
   --torii:#e5432f; --sakura:#f5a3b8; --matcha:#5a9a6a; --sky:#3a7bd5; --gold:#f2b440;
-  --bg:#fbeee9; --hill:#f4d8c3; --peak:#8a98c8; --forest:#9fcc9c; --rail:#8a8fa8;
+  --bg:#fbeee9; --hill:#f4d8c3; --peak:#8a98c8; --forest:#9fcc9c; --rail:#8a8fa8; --grape:#7c4dff;
   --display:"Mochiy Pop One","Zen Maru Gothic",system-ui,sans-serif;
   --body:"Zen Maru Gothic",ui-rounded,system-ui,sans-serif;
 }
@@ -29,12 +29,12 @@
   --sea:#152440; --sea-line:#1f3358; --land:#2b3a5e; --land-edge:#4c5f8f;
   --ink:#f2ecf4; --muted:#a8b2cf; --card:#1d2a47; --line:#33446b;
   --torii:#ff6a55; --sakura:#ff9fbb; --matcha:#7fc690; --sky:#7fb0ff; --gold:#ffc95e;
-  --bg:#101a30; --hill:#34466e; --peak:#7183b8; --forest:#3f6b58; --rail:#8792b5; color-scheme:dark}}
+  --bg:#101a30; --hill:#34466e; --peak:#7183b8; --forest:#3f6b58; --rail:#8792b5; --grape:#b49cff; color-scheme:dark}}
 :root[data-theme="dark"]{
   --sea:#152440; --sea-line:#1f3358; --land:#2b3a5e; --land-edge:#4c5f8f;
   --ink:#f2ecf4; --muted:#a8b2cf; --card:#1d2a47; --line:#33446b;
   --torii:#ff6a55; --sakura:#ff9fbb; --matcha:#7fc690; --sky:#7fb0ff; --gold:#ffc95e;
-  --bg:#101a30; --hill:#34466e; --peak:#7183b8; --forest:#3f6b58; --rail:#8792b5; color-scheme:dark}
+  --bg:#101a30; --hill:#34466e; --peak:#7183b8; --forest:#3f6b58; --rail:#8792b5; --grape:#b49cff; color-scheme:dark}
 html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
 .app{max-width:1240px;margin:0 auto;padding-block:16px 28px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:16px;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);align-items:start}
@@ -274,6 +274,9 @@ header .sub{order:2}
 .stats div{background:var(--bg);border:2px solid var(--line);border-radius:12px;padding:8px 10px;display:grid}
 .stats b{font:400 1.3rem var(--display);color:var(--torii);font-variant-numeric:tabular-nums}.stats span{font-size:.76rem;color:var(--muted);font-weight:700}
 #bz{width:100%;height:auto;display:block;background:var(--bg);border:2px solid var(--line);border-radius:14px;touch-action:none;margin:6px 0}
+#bz .pulse{transform-box:fill-box;transform-origin:center;animation:ring 1.6s ease-out infinite}
+@keyframes ring{from{transform:scale(1);opacity:.9}to{transform:scale(2.2);opacity:0}}
+@media (prefers-reduced-motion:reduce){#bz .pulse{animation:none}}
 .how pre{background:#1d2440;color:#e9edf8;border-radius:12px;padding:10px 12px;overflow-x:auto;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;margin:6px 0}
 .how code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em}
 .how li code{background:var(--bg);padding:1px 5px;border-radius:5px}
@@ -1457,14 +1460,14 @@ function openHow(){
   <div class="stats"><div><b>${nPlaces}</b><span>places on the map</span></div><div><b>${DAYS.length-1}</b><span>days in your plan</span></div><div><b>${nPhotos}</b><span>photos</span></div><div><b>${nGuides}</b><span>place guides</span></div><div><b>~1,100</b><span>lines of JavaScript</span></div><div><b>0</b><span>frameworks</span></div></div>
 
   <h4>🛩️ Try it: how the plane knows where to fly</h4>
-  <p>Every route is a <b>Bézier curve</b>, the same math used in drawing apps and fonts. It takes a start, an end and one invisible "pull" point that bends the path. Drag the orange dot.</p>
+  <p>Every route is a <b>Bézier curve</b>, the same math used in drawing apps and fonts. It takes a start, an end and one invisible "pull" point that bends the path. Drag the purple dot.</p>
   <svg id="bz" viewBox="0 0 320 170" role="img" aria-label="Interactive curve: drag the control point to bend the flight path">
    <path id="bzl" fill="none" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="4 4"/>
    <path id="bzp" fill="none" stroke="var(--sky)" stroke-width="4" stroke-linecap="round"/>
    <circle cx="40" cy="130" r="9" fill="var(--torii)"/><text x="40" y="158" text-anchor="middle" font-size="11" fill="var(--ink)" font-weight="700">Tokyo</text>
    <circle cx="280" cy="130" r="9" fill="var(--matcha)"/><text x="280" y="158" text-anchor="middle" font-size="11" fill="var(--ink)" font-weight="700">Singapore</text>
    <text id="bzplane" font-size="20" text-anchor="middle" dominant-baseline="middle">✈️</text>
-   <circle id="bzc" cx="160" cy="30" r="11" fill="var(--gold)" stroke="var(--ink)" stroke-width="2" style="cursor:grab"/>
+   <circle id="bzring" cx="160" cy="30" r="11" fill="none" stroke="var(--grape)" stroke-width="2" class="pulse"/><text id="bzlab" x="160" y="14" text-anchor="middle" font-size="10" font-weight="900" fill="var(--grape)">drag me</text><circle id="bzc" cx="160" cy="30" r="12" fill="var(--grape)" stroke="#fff" stroke-width="3" style="cursor:grab"/>
   </svg>
   <p class="note">This is the actual function moving the plane right now, read live from the page:</p>
   <pre><code>${esc(qp.toString())}</code></pre>
@@ -1486,14 +1489,15 @@ function openHow(){
 
   <h4>🛠️ How it was built</h4>
   <p>Dad and Claude built it together in a conversation, one request at a time: "add Disney hotels", "make the zoom smoother", "the plane looks weird". Claude wrote and tested the code; Dad decided what it should do and how it should feel. No framework like React, just the web platform itself, which can do a lot more than most people think.</p>
-  <p class="note">Want to see everything? Right-click the page and choose "View Page Source".</p>
+  <p>See every line of code on GitHub: <a href="https://github.com/nick-moores/japan-trip-explorer" target="_blank" rel="noopener"><b>nick-moores/japan-trip-explorer</b></a></p>
+  <p class="note">The repo is private for now, so the link works only for Dad's GitHub account. Anyone can still right-click the page and choose "View Page Source" to read the code that's running.</p>
   </div>`;
   box.hidden=false;box.querySelector(".gclose").focus();bezierDemo();
 }
 function bezierDemo(){
   const svg=$("bz"),c=$("bzc"),pth=$("bzp"),ln=$("bzl"),pl=$("bzplane");if(!svg)return;
   const A=[40,130],B=[280,130];let C=[160,30],t0=performance.now(),drag=false;
-  const draw=()=>{pth.setAttribute("d",`M${A} Q${C} ${B}`);ln.setAttribute("d",`M${A} L${C} L${B}`);c.setAttribute("cx",C[0]);c.setAttribute("cy",C[1]);};
+  const draw=()=>{pth.setAttribute("d",`M${A} Q${C} ${B}`);ln.setAttribute("d",`M${A} L${C} L${B}`);c.setAttribute("cx",C[0]);c.setAttribute("cy",C[1]);const rg=$("bzring"),lb=$("bzlab");rg.setAttribute("cx",C[0]);rg.setAttribute("cy",C[1]);lb.setAttribute("x",C[0]);lb.setAttribute("y",Math.max(10,C[1]-17));};
   const pt=e=>{const r=svg.getBoundingClientRect();return[Math.max(10,Math.min(310,(e.clientX-r.left)/r.width*320)),Math.max(10,Math.min(160,(e.clientY-r.top)/r.height*170))];};
   c.addEventListener("pointerdown",e=>{drag=true;c.setPointerCapture(e.pointerId);c.style.cursor="grabbing";});
   c.addEventListener("pointermove",e=>{if(drag){C=pt(e);draw();}});
