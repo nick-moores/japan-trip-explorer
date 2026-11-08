@@ -256,6 +256,11 @@ table.side .me{background:color-mix(in srgb,var(--gold) 28%,transparent);font-we
 table.side th.me{color:var(--ink)}
 #plan .sel h3{margin:0 0 4px}
 #plan .srow b{text-align:right;max-width:62%}
+.kansai{margin-top:6px;background:var(--card);border:3px solid var(--ink);border-radius:20px;padding:14px 16px;box-shadow:4px 4px 0 var(--ink)}
+.kansai h3{font:400 1.15rem var(--display);margin:0 0 6px}.kansai p{margin:0 0 10px}
+.kcmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:10px}
+.kcmp>div{background:var(--bg);border:2px solid var(--line);border-radius:14px;padding:10px 12px}
+.kcmp h4{margin:0 0 4px;font:400 1rem var(--display)}.kcmp ul{margin:0;padding-left:18px;display:grid;gap:3px;font-size:.9rem}
 .credit{margin:-6px 0 12px;font-size:.7rem;color:var(--muted)}
 </style>
 
@@ -337,7 +342,7 @@ const CLIM={
  N:{name:"Nagoya",m:[[9.3,1.1,51],[10.5,1.4,65],[14.5,4.6,116],[20.1,9.7,128],[24.6,14.9,150],[27.6,19.4,187],[31.4,23.5,211],[33.2,24.7,140],[29.1,21,232],[23.3,14.8,165],[17.3,8.6,79],[11.7,3.4,57]]},
  S:{name:"Singapore",m:[[30.6,24.3,222],[31.5,24.6,105],[32.2,24.9,152],[32.4,25.3,164],[32.3,25.7,164],[31.9,25.7,135],[31.4,25.4,147],[31.4,25.3,147],[31.6,25.2,125],[31.8,25,168],[31.2,24.6,252],[30.5,24.3,332]]}
 };
-const climReg=r=>r==="O"?"N":(CLIM[r]?r:"T");
+const climReg=r=>(r==="O"||r==="K")?"N":(CLIM[r]?r:"T");
 const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const F=c=>Math.round(c*9/5+32);
 // Seasonal price factors are rough planning adjustments vs. your trip doc's numbers, not quotes.
@@ -512,7 +517,12 @@ Object.assign(P,{
  usj:{n:"Universal Studios Japan",lon:135.432,lat:34.665},
  kamakura:{n:"Great Buddha of Kamakura",lon:139.536,lat:35.317},
  enoshima:{n:"Enoshima Island",lon:139.48,lat:35.30},
- zoo:{n:"Singapore Zoo",lon:103.79,lat:1.404}
+ zoo:{n:"Singapore Zoo",lon:103.79,lat:1.404},
+ kyotost:{n:"Kyoto Station",lon:135.758,lat:34.985},kyotoH:{n:"Kyoto hotel",lon:135.762,lat:34.989,hotel:1},
+ fushimi:{n:"Fushimi Inari Shrine",lon:135.7727,lat:34.9671},arashiyama:{n:"Arashiyama bamboo & monkeys",lon:135.672,lat:35.017},
+ nintendoM:{n:"Nintendo Museum",lon:135.788,lat:34.893},railmuseum:{n:"Kyoto Railway Museum",lon:135.743,lat:34.987},
+ nara:{n:"Nara Park & Todai-ji",lon:135.84,lat:34.687},kaiyukan:{n:"Kaiyukan Aquarium",lon:135.429,lat:34.655},
+ pcosaka:{n:"Pokémon Center Osaka DX",lon:135.501,lat:34.674},dotonbori:{n:"Dotonbori",lon:135.501,lat:34.669}
 });
 const HOTELS={
  okura:{name:"The Okura Tokyo",short:"Okura",area:"Toranomon",lon:139.744,lat:35.666,lo:875,hi:1060,rooms:"Two connecting rooms for the five of us.",note:"The plan from your doc. Central for everything, and the calmest, most luxurious base."},
@@ -592,10 +602,10 @@ function stayBlock(){
   <p class="note">Travel times are approximate, door to door by train (taxi to Haneda from central hotels). "Big days" adds up the round trips on your Disney, Fuji, bullet-train, Pokémon Center and airport days for the current plan. Rates other than the Okura's are planning estimates.</p>`;
 }
 
-const NIGHT={nagoya:[220,320],ryokan:[600,950],osaka:[280,420],sg:[225,300]};
-const NIGHTPLACE={disney:"dhotel",tokyo:"okura",nagoya:"nagoyaH",ryokan:"ryokan",osaka:"osakaH",sg:"changi"};
-const REGION={nagoya:"N",nagoyaH:"N",spa:"N",scmaglev:"N",ghibliP:"N",shinosaka:"O",osakaH:"O",usj:"O",fujiq:"F",ryokan:"F",chureito:"F",oshino:"F",changi:"S",gardens:"S",zoo:"S",home:"H",hnd:"T"};
-const HUB={T:"tokyost",N:"nagoya",O:"shinosaka",F:"fujiq"};
+const NIGHT={kyoto:[320,480],nagoya:[220,320],ryokan:[600,950],osaka:[280,420],sg:[225,300]};
+const NIGHTPLACE={kyoto:"kyotoH",disney:"dhotel",tokyo:"okura",nagoya:"nagoyaH",ryokan:"ryokan",osaka:"osakaH",sg:"changi"};
+const REGION={kyotost:"K",kyotoH:"K",fushimi:"K",arashiyama:"K",nintendoM:"K",railmuseum:"K",nara:"K",kaiyukan:"O",pcosaka:"O",dotonbori:"O",nagoya:"N",nagoyaH:"N",spa:"N",scmaglev:"N",ghibliP:"N",shinosaka:"O",osakaH:"O",usj:"O",fujiq:"F",ryokan:"F",chureito:"F",oshino:"F",changi:"S",gardens:"S",zoo:"S",home:"H",hnd:"T"};
+const HUB={K:"kyotost",T:"tokyost",N:"nagoya",O:"shinosaka",F:"fujiq"};
 const reg=k=>REGION[k]||"T";
 
 const BASE={
@@ -647,8 +657,16 @@ const IDEAS=[
   why:"Stay over after Fuji-Q at a lakeside ryokan with a private family onsen. Next morning, climb to Chureito Pagoda for the classic Fuji photo, then the spring ponds at Oshino Hakkai.",tip:"Ask for a room with a Fuji view"},
  {id:"nagoya",title:"Railway Park & Ghibli Park",where:"Nagoya",fit:"Adds a day + Nagoya night",lo:150,hi:260,days:1,
   why:"Stay in Nagoya after Nagashima. The SCMaglev and Railway Park has real bullet trains and a Shinkansen simulator. Ghibli Park has life-size Totoro and Spirited Away sets.",tip:"Ghibli Park sells out; book on release day"},
- {id:"usj",title:"Super Nintendo World (Universal Studios Japan)",where:"Osaka",fit:"Adds a day + Osaka night",lo:1100,hi:1600,days:1,
+ {id:"usj",group:"kansai",title:"Super Nintendo World (Universal Studios Japan)",where:"Osaka",fit:"Adds a day + Osaka night",lo:1100,hi:1600,days:1,
   why:"A full Mario Kart and Donkey Kong world you can walk around in. A big day, but huge for gamer kids. Only 50 minutes past Nagoya on the bullet train.",tip:"Get an Express Pass that includes Nintendo World"},
+ {id:"kyoto",group:"kansai",title:"Kyoto: torii gates, bamboo & monkeys",where:"Kyoto",fit:"Adds a day + Kyoto night",lo:150,hi:250,days:1,
+  why:"Climb through thousands of orange torii gates at Fushimi Inari, then walk Arashiyama's bamboo grove and feed monkeys at the hilltop monkey park. The classic Kyoto day, tuned for kids.",tip:"Start early; Fushimi Inari gets packed by 10 a.m."},
+ {id:"nintendoM",group:"kansai",title:"Nintendo Museum & Kyoto Railway Museum",where:"Kyoto (Uji)",fit:"Adds a day + Kyoto night",lo:110,hi:170,days:1,
+  why:"A gamer-and-train-lover's day: real steam locomotives and Shinkansen at the Railway Museum, then Nintendo's own museum with giant playable controllers and 50+ years of games.",tip:"Nintendo Museum tickets are by lottery, entered 3 months ahead"},
+ {id:"nara",group:"kansai",title:"Nara: bowing deer & the Great Buddha",where:"Nara",fit:"Adds a day",lo:60,hi:110,days:1,
+  why:"Hundreds of friendly deer bow for crackers, and Todai-ji holds a 15-meter bronze Buddha with a pillar hole kids try to squeeze through. Easy and unforgettable.",tip:"Hold deer crackers up high; the deer nibble"},
+ {id:"osaka",group:"kansai",title:"Osaka: aquarium, Pokémon & Dotonbori",where:"Osaka",fit:"Adds a day + Osaka night",lo:180,hi:300,days:1,
+  why:"Kaiyukan's whale shark, Pokémon Center Osaka DX and Pokémon Cafe Osaka, then Dotonbori's neon and street food at night. Flat, compact and very kid-friendly.",tip:"Pokémon Cafe Osaka books 31 days ahead"},
  {id:"kamakura",title:"Kamakura & Enoshima",where:"Kanagawa",fit:"Adds a day",lo:80,hi:130,days:1,
   why:"An easy day trip to the 13 m Great Buddha you can step inside, then a seaside island with caves, tide pools and the old Enoden train along the beach.",tip:"Go on a weekday to skip crowds"}
 ];
@@ -686,15 +704,26 @@ function build(c){
   if(c.ideas.has("kawaguchi")){const d=days[at(5)];d.night="ryokan";d.steps.push(["♨️","Evening","Check into a lakeside ryokan: kaiseki dinner, yukata robes and a private family onsen."]);
     ins(5,{key:"kawa",t:"Lake Kawaguchi morning",where:"Mt. Fuji",night:"tokyo",legs:[["ryokan","chureito","car"],["chureito","oshino","car"]],
     steps:[["⛩️","Sunrise","Climb to Chureito Pagoda for the postcard view of Fuji."],["💧","Late morning","Oshino Hakkai's crystal-clear spring ponds and grilled mochi."],["🚃","Afternoon","Fuji Excursion train back to Tokyo."]],tips:["Clear mornings give the best Fuji views"]});}
-  const nag=c.nagoya||c.ideas.has("nagoya"),usj=c.ideas.has("usj");
+  const WEST=[];
+  if(c.ideas.has("nagoya"))WEST.push({key:"nag",night:"nagoya",t:"Trains & Ghibli in Nagoya",where:"Nagoya",legs:[["nagoyaH","scmaglev","train"],["scmaglev","ghibliP","train"]],
+    steps:[["🚄","Morning","SCMaglev & Railway Park: real bullet trains, maglev and a driving simulator."],["🌳","Afternoon","Ghibli Park: Totoro's house, the Bathhouse and the Cat Bus."]],tips:["Ghibli Park tickets sell out fast"]});
+  if(c.ideas.has("kyoto"))WEST.push({key:"kyo",night:"kyoto",t:"Kyoto: torii gates, bamboo & monkeys",where:"Kyoto",legs:[["kyotoH","fushimi","train"],["fushimi","arashiyama","train"]],
+    steps:[["⛩️","Early morning","Fushimi Inari: walk up through thousands of orange torii gates before the crowds. Turn back whenever little legs say so."],["🎋","Afternoon","Arashiyama: the bamboo grove, then the hilltop monkey park where you feed the monkeys from inside a hut."],["🍡","Evening","Dinner and dango sweets near Kyoto Station."]],tips:["Start Fushimi Inari by 8 a.m.","Monkey park is a 20-minute uphill walk"]});
+  if(c.ideas.has("nintendoM"))WEST.push({key:"nin",night:"kyoto",t:"Nintendo Museum & Kyoto trains",where:"Kyoto",legs:[["kyotoH","railmuseum","train"],["railmuseum","nintendoM","train"]],
+    steps:[["🚂","Morning","Kyoto Railway Museum: steam locomotives in a working roundhouse, real Shinkansen and a ride on a steam train."],["🎮","Afternoon","Nintendo Museum in Uji: playable giant controllers and a walk through 50+ years of Nintendo, from playing cards to Switch."],["🍜","Evening","Back to Kyoto Station for ramen on the 10th floor of the station building."]],tips:["Nintendo Museum tickets: lottery 3 months ahead","Closed Tuesdays"]});
+  if(c.ideas.has("nara"))WEST.push({key:"nara",night:"kyoto",t:"Nara: bowing deer & the Great Buddha",where:"Nara",legs:[["kyotoH","nara","train"]],
+    steps:[["🦌","Morning","Nara Park: buy deer crackers and the deer bow to you (they also nibble, so hold the crackers high)."],["🛕","Midday","Todai-ji's giant bronze Buddha. Kids can try to squeeze through the hole in the pillar for good luck."],["🍡","Afternoon","Fresh mochi pounding show at Nakatanidou, then back to Kyoto."]],tips:["About 45 minutes from Kyoto by train"]});
+  if(c.ideas.has("osaka"))WEST.push({key:"osk",night:"osaka",t:"Osaka: aquarium, Pokémon & Dotonbori",where:"Osaka",legs:[["osakaH","kaiyukan","train"],["kaiyukan","pcosaka","train"],["pcosaka","dotonbori","walk"]],
+    steps:[["🦈","Morning","Kaiyukan aquarium: a whale shark in a giant tank you spiral down around."],["⚡","Afternoon","Pokémon Center Osaka DX and Pokémon Cafe Osaka in Shinsaibashi."],["🐙","Evening","Dotonbori: neon lights, the giant crab sign, takoyaki and okonomiyaki."]],tips:["Pokémon Cafe Osaka books 31 days ahead"]});
+  if(c.ideas.has("usj"))WEST.push({key:"usj",night:"osaka",t:"Super Nintendo World",where:"Osaka",legs:[["osakaH","usj","train"]],
+    steps:[["🍄","All day","Universal Studios Japan's Super Nintendo World: Mario Kart, Yoshi and Donkey Kong."],["🎟️","Tip","An Express Pass with Nintendo World entry saves hours of waiting."]],tips:["Express Pass sells out"]});
   const d7=days[at(7)];
-  if(nag||usj){d7.night=nag?"nagoya":"osaka";d7.steps[3]=nag?["🏨","Evening","Stay overnight at a hotel by Nagoya Station. No late train back."]:["🚄","Evening","Bullet train 50 minutes on to Osaka and check in."];}
+  if(WEST.length){d7.night=WEST[0].night;d7.steps[3]=["🏨","Evening",{nagoya:"Stay overnight at a hotel by Nagoya Station. No late train back.",kyoto:"Bullet train 35 minutes on to Kyoto and check in.",osaka:"Bullet train 50 minutes on to Osaka and check in."}[WEST[0].night]];}
+  else if(c.nagoya){d7.night="nagoya";d7.steps[3]=["🏨","Evening","Stay overnight by Nagoya Station and take a relaxed train back in the morning."];}
   let after=7;
-  if(c.ideas.has("nagoya")){ins(7,{key:"nag",t:"Trains & Ghibli in Nagoya",where:"Nagoya",night:usj?"osaka":"tokyo",legs:[["nagoyaH","scmaglev","train"],["scmaglev","ghibliP","train"]],
-    steps:[["🚄","Morning","SCMaglev & Railway Park: real bullet trains, maglev and a driving simulator."],["🌳","Afternoon","Ghibli Park: Totoro's house, the Bathhouse and the Cat Bus."],["🌙","Evening",usj?"Bullet train on to Osaka.":"Bullet train home to Tokyo."]],tips:["Ghibli Park tickets sell out fast"]});after="nag";}
-  else if(c.nagoya){d7.steps[3]=["🏨","Evening","Stay overnight by Nagoya Station and take a relaxed train back in the morning."];}
-  if(usj)ins(after,{key:"usj",t:"Super Nintendo World",where:"Osaka",night:"tokyo",legs:[["osakaH","usj","train"]],
-    steps:[["🍄","All day","Universal Studios Japan's Super Nintendo World: Mario Kart, Yoshi and Donkey Kong."],["🎟️","Tip","An Express Pass with Nintendo World entry saves hours of waiting."],["🚄","Evening","Bullet train back to Tokyo, about 2.5 hours."]],tips:["Express Pass sells out"]});
+  WEST.forEach((w,i)=>{const nx=WEST[i+1],base=w.night;w.night=nx?nx.night:"tokyo";
+    w.steps.push(["🌙","Tonight",nx?(nx.night===base?"Same hotel again tonight.":{nagoya:"Stay in Nagoya.",kyoto:"Train on to Kyoto and check in.",osaka:"Train on to Osaka and check in."}[nx.night]):"Bullet train back to Tokyo, about 2 to 2.5 hours."]);
+    ins(after,w);after=w.key;});
   if(c.sg===2)ins(9,{...clone(BASE.S),key:"S"});
   if(c.ideas.has("kamakura"))ins(8,{key:"kama",t:"Kamakura & Enoshima",where:"Kanagawa",night:"tokyo",legs:[["okura","kamakura","train"],["kamakura","enoshima","train"]],
     steps:[["🧘","Morning","The Great Buddha of Kamakura. You can step inside him."],["🏝️","Afternoon","Ride the little Enoden train to Enoshima for caves and tide pools."]]});
@@ -716,7 +745,7 @@ function build(c){
   return [{t:"Our big family adventure",where:"Overview",legs:[],overview:1},...days];
 }
 function costOf(c,days){
-  const H=HOTELS[c.hotel],trip=days.slice(1);const n={disney:0,tokyo:0,nagoya:0,ryokan:0,osaka:0,sg:0};
+  const H=HOTELS[c.hotel],trip=days.slice(1);const n={kyoto:0,disney:0,tokyo:0,nagoya:0,ryokan:0,osaka:0,sg:0};
   trip.forEach(d=>{if(n[d.night]!==undefined)n[d.night]++;});
   const ideas=IDEAS.filter(i=>c.ideas.has(i.id));
   const L=[
@@ -724,6 +753,7 @@ function costOf(c,days){
    ["Tokyo → Singapore flight",1500,2000],
    [`${H.short}, ${n.tokyo} nights`,n.tokyo*H.lo,n.tokyo*H.hi]];
   if(n.nagoya)L.push([`Nagoya hotel, ${n.nagoya} night`,n.nagoya*NIGHT.nagoya[0],n.nagoya*NIGHT.nagoya[1]]);
+  if(n.kyoto)L.push([`Kyoto hotel, ${n.kyoto} night${n.kyoto>1?"s":""}`,n.kyoto*NIGHT.kyoto[0],n.kyoto*NIGHT.kyoto[1]]);
   if(n.osaka)L.push([`Osaka hotel, ${n.osaka} night`,n.osaka*NIGHT.osaka[0],n.osaka*NIGHT.osaka[1]]);
   if(n.ryokan)L.push(["Lakeside ryokan with dinner",n.ryokan*NIGHT.ryokan[0],n.ryokan*NIGHT.ryokan[1]]);
   if(c.hotel==="apt")L.push(["Apartment cleaning & service fees",150,300]);
@@ -1041,9 +1071,14 @@ function renderPlan(c){
   <div class="meterlab"><span>$20k</span><span>Budget $30–32k</span><span>$40k</span></div>
   <table>${c.L.map(r=>`<tr><td>${esc(r[0])}</td><td>${fmt(r[1])}–${fmt(r[2]).slice(1)}</td></tr>`).join("")}<tr class="tot"><td>Estimated total</td><td>${fmt(c.lo)}–${fmt(c.hi).slice(1)}</td></tr></table>
   <p class="note">Estimates in USD. Okura, flights, parks and transit come from your trip doc. Other hotel rates, extras and per-day food are my estimates; check current prices when you book.</p>`;
-  $("ideas").innerHTML=IDEAS.map(i=>{const on=cfg.ideas.has(i.id);return`<article class="idea${on?" on":""}"><div class="ih"><h4>${esc(i.title)}</h4><span class="fit">${esc(i.fit)}</span></div>
+  const card=i=>{const on=cfg.ideas.has(i.id);return`<article class="idea${on?" on":""}"><div class="ih"><h4>${esc(i.title)}</h4><span class="fit">${esc(i.fit)}</span></div>
    <div class="iw">${esc(i.where)} · about ${fmt(i.lo)}–${fmt(i.hi).slice(1)} for 5</div><p>${esc(i.why)}</p><div class="if"><span class="tip">📌 ${esc(i.tip)}</span>
-   <button type="button" class="add" data-idea="${i.id}" aria-pressed="${on}">${on?"✓ In the trip":"＋ Add to trip"}</button></div></article>`;}).join("");
+   <button type="button" class="add" data-idea="${i.id}" aria-pressed="${on}">${on?"✓ In the trip":"＋ Add to trip"}</button></div></article>`;};
+  $("ideas").innerHTML=IDEAS.filter(i=>!i.group).map(card).join("")+`<section class="kansai"><h3>🏯 Add Kyoto or Osaka</h3>
+   <p>These pick up right after Nagashima Spa Land, which is already halfway there: Kyoto is 35 minutes past Nagoya by bullet train and Osaka about 50. Add any mix and they chain together, then one bullet train takes you back to Tokyo (about 2–2.5 hours).</p>
+   <div class="kcmp"><div><h4>⛩️ Kyoto</h4><ul><li>Temples, torii gates and bamboo forests</li><li>Monkeys at Arashiyama, deer in nearby Nara</li><li>The Nintendo Museum and a big railway museum</li><li>Lots of walking and some hills</li></ul></div>
+   <div><h4>🐙 Osaka</h4><ul><li>Japan's food city: takoyaki, okonomiyaki</li><li>Whale shark aquarium and Pokémon Center Osaka DX</li><li>Super Nintendo World at Universal Studios</li><li>Flatter and easier with tired kids</li></ul></div></div>
+   <p class="note"><b>If you add one day:</b> Kyoto's torii gates and monkeys. <b>Two days:</b> add Osaka or Super Nintendo World. <b>For the gamers:</b> Nintendo Museum plus Super Nintendo World.</p></section>`+IDEAS.filter(i=>i.group==="kansai").map(card).join("");
   renderDisney();renderWhen();
 }
 function rebuild(keepKey){
@@ -1277,6 +1312,19 @@ const WIKI={okura:"The Okura Tokyo",tdl:"Tokyo Disneyland",tds:"Tokyo DisneySea"
  changi:"Jewel Changi Airport",gardens:"Gardens by the Bay",tower:"Tokyo Tower",odaiba:"Odaiba",yoyogi:"Meiji Shrine",teamlab:"teamLab Planets",mitaka:"Ghibli Museum",
  shibuya:"Shibuya Crossing",pokepark:"Yomiuriland",ryokan:"Lake Kawaguchi",chureito:"Chureito Pagoda",oshino:"Oshino Hakkai",scmaglev:"SCMaglev and Railway Park",
  ghibliP:"Ghibli Park",osakaH:"Dōtonbori",usj:"Universal Studios Japan",kamakura:"Kōtoku-in",enoshima:"Enoshima",zoo:"Singapore Zoo"};
+Object.assign(GUIDE,{
+ kyotoH:{do:["Kyoto Station building's rooftop Sky Garden and its big staircase","Kyoto Tower across the street","Porta and Cube shopping under the station"],eat:[["Kyoto Ramen Koji","Ramen from around Japan on the station's 10th floor"],["Isetan depachika","Bento and Kyoto sweets"]],tip:"Staying by the station makes every Kyoto day trip easy."},
+ fushimi:{do:["Walk the torii tunnel up the mountain (turn back anytime)","Fox statues guard the shrine; kids love spotting them","Yotsutsuji viewpoint about 30–45 minutes up"],eat:[["Inari sushi stands","Sweet tofu-pocket sushi named after the shrine"],["Street stalls","Grilled mochi and fox-shaped crackers"]],tip:"Go by 8 a.m. for photos without crowds."},
+ arashiyama:{do:["Bamboo grove path","Iwatayama Monkey Park: feed monkeys from inside the hut","Togetsukyo Bridge and rowboats on the river"],eat:[["Yudofu (tofu hot pot) restaurants","Arashiyama's local specialty"],["Matcha soft serve","Sold all along the main street"]],tip:"The monkey park is a steep 20-minute walk up."},
+ nintendoM:{do:["Giant playable controllers and old-school games","50+ years of Nintendo history, from playing cards to Switch","Exclusive museum shop"],eat:[["Museum café (Hatena Burger)","Nintendo-themed food"],["Uji matcha shops","Uji is Japan's famous green-tea town"]],tip:"Lottery entries open three months before your date; closed Tuesdays."},
+ railmuseum:{do:["Steam locomotives in a working roundhouse","Short steam-train ride","Real Shinkansen and driving simulators"],eat:[["Museum restaurant","Overlooks the Shinkansen tracks"],["Umekoji Park picnic","Next door"]],tip:"Simulator tickets go by lottery on the day; enter early."},
+ nara:{do:["Deer crackers (shika senbei) in Nara Park","Todai-ji's Great Buddha and the pillar hole","Kasuga Taisha's lantern-lined paths"],eat:[["Nakatanidou","Famous high-speed mochi pounding show"],["Kakinoha sushi","Sushi wrapped in persimmon leaves"]],tip:"Buy crackers only from official vendors; keep maps in pockets, since deer eat paper."},
+ kaiyukan:{do:["Spiral down around the giant Pacific tank and its whale shark","Touch pool with rays and small sharks","Tempozan Ferris wheel next door"],eat:[["Naniwa Kuishinbo Yokocho","Retro Osaka food alley in the mall next door"],["Tempozan Marketplace","Easy family options"]],tip:"Go early or late afternoon; it's busiest at midday."},
+ pcosaka:{do:["Pokémon Center Osaka DX (Daimaru Shinsaibashi)","Pokémon Cafe Osaka in the same building","Shinsaibashi covered shopping street"],eat:[["Pokémon Cafe Osaka","Book exactly 31 days ahead"],["Daimaru food hall","Basement depachika"]],tip:"Osaka DX has exclusive Osaka-themed merch."},
+ dotonbori:{do:["The Glico running man sign","Giant crab, octopus and dragon signs","Tombori river cruise"],eat:[["Kukuru","Takoyaki octopus balls"],["Mizuno","Fluffy Osaka okonomiyaki"]],tip:"Prettiest after dark when the neon comes on."}
+});
+OFFICIAL.nintendoM="https://museum.nintendo.com/en/";OFFICIAL.kaiyukan="https://www.kaiyukan.com/language/eng/";
+Object.assign(WIKI,{fushimi:"Fushimi Inari-taisha",arashiyama:"Arashiyama",nintendoM:"Nintendo Museum",railmuseum:"Kyoto Railway Museum",nara:"Tōdai-ji",kaiyukan:"Osaka Aquarium Kaiyukan",dotonbori:"Dōtonbori",pcosaka:"Pokémon Center",kyotoH:"Kyoto Station"});
 const placeQ=k=>{const n=k==="okura"?HOTELS[cfg.hotel].name.replace(/^a family apartment$/,"Shinjuku"):k==="dhotel"?DHOTELS[cfg.dhotel].name:P[k].n;return n+(reg(k)==="S"?", Singapore":", Japan");};
 const mapsURL=q=>"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q);
 const nearQ=(k,name)=>{const area={okura:"Toranomon Tokyo",hilton:"Maihama",dhotel:"Maihama"}[k]||P[k].n;return name.replace(/\s*\(.*?\)\s*/g," ").trim()+" "+area+(reg(k)==="S"?" Singapore":" Japan");};
@@ -1300,7 +1348,7 @@ function closeGuide(){$("guide").hidden=true;}
 /* ---------- tonight + trip chat ---------- */
 function tonightName(d){
   return{tokyo:HOTELS[cfg.hotel].name.replace(/^a family/,"Our family"),disney:DHOTELS[cfg.dhotel].name,nagoya:"A hotel by Nagoya Station",ryokan:"A lakeside ryokan at Lake Kawaguchi",
-    osaka:"A hotel in Osaka",sg:"Crowne Plaza Changi Airport",plane:"On the overnight flight home",home:"Home sweet home"}[d.night]||"";
+    osaka:"A hotel in Osaka",kyoto:"A hotel by Kyoto Station",sg:"Crowne Plaza Changi Airport",plane:"On the overnight flight home",home:"Home sweet home"}[d.night]||"";
 }
 function tonightHTML(d){
   const name=tonightName(d);if(!name)return"";
