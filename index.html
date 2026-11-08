@@ -227,6 +227,25 @@ tr.tot td{border:0;padding-top:8px;font-weight:900}
 #chatsend{border:2px solid var(--ink);background:var(--torii);color:#fff;border-radius:999px;padding:8px 14px;font:700 .9rem var(--body);cursor:pointer}
 #chatsend:disabled{opacity:.5}
 .focusing .askbtn,.focusing .chat{display:none}
+.wx{margin-top:10px;display:flex;gap:8px;align-items:flex-start;font-size:.9rem;color:var(--ink)}
+.wx b{font-weight:700;color:var(--muted)}
+.seasons{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px}
+.seasons button{border:2px solid var(--line);background:var(--bg);color:var(--ink);border-radius:14px;padding:8px 10px;text-align:left;cursor:pointer;font-family:var(--body);display:grid;gap:2px}
+.seasons button.on{border-color:var(--ink);background:var(--gold);color:#24304f}
+.sn{font-weight:900;font-size:.9rem}.sd{font-size:.74rem;opacity:.8}.sw{font-size:.78rem;font-weight:700}.sc{font-size:.82rem;font-weight:900;font-variant-numeric:tabular-nums}
+.sel{margin-top:12px;background:var(--bg);border:2px solid var(--ink);border-radius:16px;padding:12px 14px}
+.sel h3{margin:0 0 4px!important}.sel h3 small{font:700 .8rem var(--body);color:var(--muted)}.sel p{margin:0 0 8px}
+.srow{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:4px 0;border-top:1px dotted var(--line);font-size:.9rem}
+.crowd{color:var(--torii);letter-spacing:2px}.crowd i{color:var(--line);font-style:normal}
+.fitok{color:var(--matcha);font-weight:900}.fitno{color:var(--torii);font-weight:900}
+#when h3{font:400 1rem var(--display);margin:16px 0 8px}
+.wxt td,.wxt th{text-align:right}.wxt td:first-child,.wxt th:first-child{text-align:left}
+.wxt th{font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.clim{width:100%;height:auto;display:block}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:.74rem;color:var(--muted);margin-top:4px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.gl,.wl{margin:0;padding-left:20px;display:grid;gap:5px}
+.gl{list-style:"✓  "}.wl{list-style:"⚠️ "}
 .credit{margin:-6px 0 12px;font-size:.7rem;color:var(--muted)}
 </style>
 
@@ -258,6 +277,7 @@ tr.tot td{border:0;padding-top:8px;font-weight:900}
     <div class="tabs" role="tablist">
       <button type="button" role="tab" id="t-days" data-tab="days" aria-selected="true">🗾 Days</button>
       <button type="button" role="tab" id="t-plan" data-tab="plan" aria-selected="false">💴 Plan</button>
+      <button type="button" role="tab" id="t-when" data-tab="when" aria-selected="false">📅 When</button>
       <button type="button" role="tab" id="t-disney" data-tab="disney" aria-selected="false">🏰 Disney</button>
       <button type="button" role="tab" id="t-ideas" data-tab="ideas" aria-selected="false">✨ Ideas</button>
     </div>
@@ -271,6 +291,7 @@ tr.tot td{border:0;padding-top:8px;font-weight:900}
     <div class="hint">Tap the arrows, the day bubbles, or swipe the map. Arrow keys work too.</div>
     </div>
     <div id="v-plan" class="view card" hidden><div id="plan"></div></div>
+    <div id="v-when" class="view card" hidden><div id="when"></div></div>
     <div id="v-disney" class="view card" hidden><div id="disney"></div></div>
     <div id="v-ideas" class="view" hidden><p class="lead">Ideas you might not have on the list yet. Add one and it lands in the right day, with the map, day count and cost updating.</p><div id="ideas" class="ideas"></div></div>
   </div>
@@ -298,6 +319,96 @@ const P={
  gardens:{n:"Gardens by the Bay",lon:103.864,lat:1.282}
 };
 const M={plane:"✈️",train:"🚃",bullet:"🚄",bus:"🚌",car:"🚕",walk:"🚶"};
+/* ---------- when to go ---------- */
+// 1991–2020 normals: [mean daily max °C, mean daily min °C, rain mm] per month
+const CLIM={
+ T:{name:"Tokyo",m:[[9.8,1.2,60],[10.9,2.1,57],[14.2,5,116],[19.4,9.8,134],[23.6,14.6,140],[26.1,18.5,168],[29.9,22.4,156],[31.3,23.5,155],[27.5,20.3,225],[22,14.8,235],[16.7,8.8,96],[12,3.8,58]],hum:[51,52,57,62,68,75,76,74,75,71,64,56]},
+ F:{name:"Mt. Fuji (Kawaguchiko)",m:[[5.5,-5.7,61],[6.6,-4.8,55],[10.5,-1.3,108],[16.1,3.7,106],[20.6,8.9,123],[23,13.7,157],[27.2,18,178],[28.1,18.5,177],[23.8,14.8,265],[18.3,8.7,230],[13.8,2.2,76],[8.5,-2.9,50]]},
+ N:{name:"Nagoya",m:[[9.3,1.1,51],[10.5,1.4,65],[14.5,4.6,116],[20.1,9.7,128],[24.6,14.9,150],[27.6,19.4,187],[31.4,23.5,211],[33.2,24.7,140],[29.1,21,232],[23.3,14.8,165],[17.3,8.6,79],[11.7,3.4,57]]},
+ S:{name:"Singapore",m:[[30.6,24.3,222],[31.5,24.6,105],[32.2,24.9,152],[32.4,25.3,164],[32.3,25.7,164],[31.9,25.7,135],[31.4,25.4,147],[31.4,25.3,147],[31.6,25.2,125],[31.8,25,168],[31.2,24.6,252],[30.5,24.3,332]]}
+};
+const climReg=r=>r==="O"?"N":(CLIM[r]?r:"T");
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const F=c=>Math.round(c*9/5+32);
+// Seasonal price factors are rough planning adjustments vs. your trip doc's numbers, not quotes.
+const SEASONS={
+ june:{name:"Early summer",dates:"Mid-June to early July",months:[5,6],win:21,icon:"🌦️",crowd:2,f:{fly:1.05,hotel:0.95,dis:0.97},
+  vibe:"School's out in California but not yet in Japan, so parks and trains are quieter. It's the rainy season, but rain usually comes in showers, not all day.",
+  good:["Japanese schools are still in session, so Disney and Fuji-Q are noticeably quieter","Hydrangeas bloom everywhere, and the hotel and Disney rates are softer","Long daylight, with sunset around 7 p.m."],
+  watch:["Rainy season in Tokyo runs about June 8 to July 20 on average: pack umbrellas and plan indoor backups","Hot and sticky by late June (low 80s °F, 75% humidity)","Flights are pricey: June is one of the most expensive months to fly LAX–Tokyo"],
+  only:["Hydrangea temples and gardens","Firefly evenings in some parks","Disney summer splash shows begin in early July"]},
+ summer:{name:"Peak summer",dates:"Late July to mid-August",months:[6,7],win:24,icon:"☀️",crowd:4,f:{fly:1,hotel:1.08,dis:1.05},
+  vibe:"Classic summer break: festivals, fireworks and long days, with Texas-level heat. Tokyo afternoons feel close to 100°F with the humidity.",
+  good:["Summer festivals, fireworks (Sumida River fireworks are the last Saturday of July) and yukata nights","Nagashima Spa Land's giant outdoor pool complex is open in summer","Disney's summer soak shows: the kids will get drenched on purpose"],
+  watch:["Hottest time of year: 88–91°F highs, warm nights, high humidity","Obon week (about Aug 13–16) packs trains and pushes hotel prices up","Typhoon season peaks in August and September and can scramble a day or two","Fuji is often hidden in summer haze"],
+  only:["Fireworks festivals","Bon odori dances","Nagashima's summer pool park","Shaved ice (kakigōri) on every corner"]},
+ xmas:{name:"Christmas",dates:"About Dec 18 to Dec 30",months:[11],win:13,icon:"🎄",crowd:3,f:{fly:1.1,hotel:1.15,dis:1.08},
+  vibe:"Cool, dry and sunny, with the clearest Fuji views of the year and lights everywhere. Coming home before New Year avoids the closures.",
+  good:["Best Mt. Fuji visibility of the year: crisp, clear mornings","Christmas at Tokyo Disney and huge city illuminations","Nabana no Sato's famous winter light show is right next to Nagashima Spa Land","Singapore's Christmas lights on Orchard Road"],
+  watch:["Cold: Tokyo highs in the low 50s °F; Fuji-Q at freezing mornings, so bring real coats","Coasters at Fuji-Q and Nagashima close more often in strong winter wind","December flights are among the priciest of the year","Singapore's wettest month: expect afternoon downpours"],
+  only:["Disney Christmas","Winter illuminations","Christmas markets","Snow-capped Fuji"]},
+ newyear:{name:"Christmas through New Year",dates:"About Dec 26 to Jan 6",months:[11,0],win:12,icon:"🎍",crowd:5,f:{fly:1.12,hotel:1.3,dis:1.12},
+  vibe:"Japan's biggest holiday. Magical in its own way, but the most crowded and expensive time for Disney and hotels, and many small restaurants close for a few days.",
+  good:["New Year's shrine visits and festive decorations","Lucky-bag (fukubukuro) sales on January 2: kids love the mystery bags","Clear, cold, sunny days and great Fuji views"],
+  watch:["Many shops, markets and small restaurants close around Dec 31 to Jan 3","Disney is at its most crowded and highest prices Dec 26 to Jan 3","Hotels hit peak rates over New Year","Trains are packed at the start and end of the holiday"],
+  only:["Hatsumōde (first shrine visit)","New Year's food (osechi, mochi)","Lucky-bag sales"]},
+ thanks:{name:"Thanksgiving week",dates:"About Nov 20 to Nov 28",months:[10],win:9,icon:"🍁",crowd:2,f:{fly:0.85,hotel:1.05,dis:1},
+  vibe:"Peak autumn leaves, crisp sweater weather and Disney Christmas already running, but it's only about 9 days unless the kids miss some school.",
+  good:["Autumn leaves peak in Tokyo in late November (the ginkgo avenue at Meiji Jingu Gaien glows gold)","Comfortable 60s °F days: easiest weather for long park days","Cheaper flights than summer or December, and Disney Christmas starts in November"],
+  watch:["Only about 9 days off: fits the Go-go plan only if the kids miss a few school days","Popular autumn-leaf spots get busy on weekends","Short days: dark by about 4:30 p.m."],
+  only:["Autumn leaves","Disney Christmas","Early illuminations"]},
+ spring:{name:"Spring break",dates:"Late March to early April",months:[2,3],win:10,icon:"🌸",crowd:5,f:{fly:1.05,hotel:1.3,dis:1.05},
+  vibe:"Cherry blossom season: the most famous time to see Japan, and the busiest. Mild weather, but hotels book out and some luxury rooms double in price.",
+  good:["Cherry blossoms: parks full of picnics under pink trees","Mild 57–66°F days, perfect for walking","Japanese school spring break means lively parks"],
+  watch:["Hotels are at peak prices and sell out early","Disney and trains are very crowded during Japanese spring break","Only 9–10 days off for most US schools"],
+  only:["Cherry blossoms (hanami)","Night-lit blossom parks","Sakura-flavored everything"]}
+};
+function seasonWeather(region,sk){const S=SEASONS[sk||cfg.season],C=CLIM[climReg(region)];
+  const ms=S.months.map(m=>C.m[m]);const avg=i=>ms.reduce((a,x)=>a+x[i],0)/ms.length;return{hi:avg(0),lo:avg(1),rain:avg(2)};}
+function wxLine(d){
+  if(d.overview||d.final||!d.legs.length)return"";
+  const regs=d.legs.map(l=>reg(l[1])).filter(r=>r!=="H");const r=climReg(regs.find(x=>x!=="T")||regs[0]||"T");
+  const w=seasonWeather(r),sk=SEASONS[cfg.season];
+  const feel=w.hi>=30?"hot and humid":w.hi>=25?"warm and humid":w.hi>=18?"mild":w.hi>=10?"cool":"cold";
+  const icon=w.hi>=28?"☀️":w.hi>=18?"⛅":w.lo<=0?"🥶":"🧥";
+  const wet=w.rain>=200?" · showers likely":w.rain>=140?" · some rain days":"";
+  return`<div class="wx"><span>${icon}</span><span><b>${esc(CLIM[r].name)}, typical for ${esc(sk.name)}:</b> ${F(w.hi)}° / ${F(w.lo)}°F, ${feel}${wet}</span></div>`;
+}
+function climChart(sk){
+  const S=SEASONS[sk],C=CLIM.T.m,W=320,H=150,l=30,r=8,t=12,b=22,iw=W-l-r,ih=H-t-b;
+  const x=i=>l+iw*(i+.5)/12,ty=v=>t+ih*(1-(v-25)/(95-25)),bw=iw/12;
+  const maxRain=240,ry=v=>t+ih-(v/maxRain)*ih*.45;
+  const hi=C.map((m,i)=>`${x(i)},${ty(F(m[0]))}`).join(" "),lo=C.map((m,i)=>`${x(i)},${ty(F(m[1]))}`).join(" ");
+  return`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Tokyo average monthly high and low temperatures and rainfall" class="clim">
+   ${S.months.map(m=>`<rect x="${l+bw*m}" y="${t}" width="${bw}" height="${ih}" fill="var(--gold)" opacity=".28" rx="3"/>`).join("")}
+   ${[30,50,70,90].map(v=>`<line x1="${l}" x2="${W-r}" y1="${ty(v)}" y2="${ty(v)}" stroke="var(--line)" stroke-width="1"/><text x="${l-4}" y="${ty(v)+3}" text-anchor="end" font-size="9" fill="var(--muted)">${v}°</text>`).join("")}
+   ${C.map((m,i)=>`<rect x="${x(i)-bw*.28}" y="${ry(m[2])}" width="${bw*.56}" height="${t+ih-ry(m[2])}" fill="var(--sky)" opacity=".35" rx="2"/>`).join("")}
+   <polyline points="${hi}" fill="none" stroke="var(--torii)" stroke-width="2.5" stroke-linejoin="round"/>
+   <polyline points="${lo}" fill="none" stroke="var(--sky)" stroke-width="2.5" stroke-linejoin="round"/>
+   ${C.map((m,i)=>`<text x="${x(i)}" y="${H-7}" text-anchor="middle" font-size="9" fill="var(--muted)" font-weight="${S.months.includes(i)?900:400}">${MON[i][0]}</text>`).join("")}
+  </svg><div class="legend"><span><i style="background:var(--torii)"></i>Avg high</span><span><i style="background:var(--sky)"></i>Avg low</span><span><i style="background:var(--sky);opacity:.35"></i>Rain</span><span><i style="background:var(--gold);opacity:.5"></i>Your window</span></div>`;
+}
+function renderWhen(){
+  const S=SEASONS[cfg.season],c=costOf(cfg,DAYS);
+  const rows=Object.entries(SEASONS).map(([k,s])=>{const cc=costOf({...cfg,season:k},DAYS),t=seasonWeather("T",k);return{k,s,cc,t};});
+  const fit=c.days<=S.win?`<span class="fitok">✓ Your ${c.days}-day plan fits</span>`:`<span class="fitno">Your ${c.days}-day plan is longer than this ${S.win}-day window</span>`;
+  $("when").innerHTML=`
+  <div class="seasons">${rows.map(({k,s,cc,t})=>`<button type="button" data-set="season" data-val="${k}" class="${k===cfg.season?"on":""}" aria-pressed="${k===cfg.season}">
+    <span class="sn">${s.icon} ${esc(s.name)}</span><span class="sd">${esc(s.dates)}</span>
+    <span class="sw">Tokyo ${F(t.hi)}°/${F(t.lo)}°F</span><span class="sc">${k1(cc.lo)}–${k1(cc.hi).slice(1)}</span></button>`).join("")}</div>
+  <div class="sel"><h3>${S.icon} ${esc(S.name)} <small>${esc(S.dates)}</small></h3><p>${esc(S.vibe)}</p>
+   <div class="srow"><span>Crowds</span><span class="crowd" aria-label="Crowd level ${S.crowd} of 5">${"●".repeat(S.crowd)}<i>${"●".repeat(5-S.crowd)}</i></span></div>
+   <div class="srow"><span>Estimated cost</span><b>${fmt(c.lo)}–${fmt(c.hi).slice(1)}</b></div>
+   <div class="srow"><span>Trip length</span>${fit}</div></div>
+  <h3>Weather where you'll be</h3>
+  <table class="wxt"><tr><th></th><th>High</th><th>Low</th><th>Rain/mo</th></tr>${["T","F","N","S"].map(r=>{const w=seasonWeather(r);return`<tr><td>${esc(CLIM[r].name)}</td><td>${F(w.hi)}°F</td><td>${F(w.lo)}°F</td><td>${(w.rain/25.4).toFixed(1)} in</td></tr>`;}).join("")}</table>
+  <p class="note">For comparison, Houston in August averages about 94°/76°F. Tokyo's summer humidity runs around 75%.</p>
+  <h3>Tokyo through the year</h3>${climChart(cfg.season)}
+  <h3>Why go then</h3><ul class="gl">${S.good.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
+  <h3>Watch out for</h3><ul class="wl">${S.watch.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
+  <h3>Only in this season</h3><div class="tips">${S.only.map(x=>`<span class="tip">✨ ${esc(x)}</span>`).join("")}</div>
+  <p class="note">Weather: 1991–2020 averages from the Japan Meteorological Agency (Tokyo, Kawaguchiko, Nagoya) and Singapore's climate normals. Costs apply rough seasonal adjustments to flights, hotels and Disney tickets; they're planning estimates, not quotes.</p>`;
+}
 /* ---------- Disney ---------- */
 const YEN=157;
 const DHOTELS={
@@ -460,7 +571,7 @@ const IDEAS=[
   why:"An easy day trip to the 13 m Great Buddha you can step inside, then a seaside island with caves, tide pools and the old Enoden train along the beach.",tip:"Go on a weekday to skip crowds"}
 ];
 
-const cfg={pace:"bal",hotel:"okura",nagoya:false,sg:1,dhotel:"none",dnights:2,pa:"must",ideas:new Set()};
+const cfg={pace:"bal",hotel:"okura",nagoya:false,sg:1,dhotel:"none",dnights:2,pa:"must",season:"summer",ideas:new Set()};
 try{const s=JSON.parse(localStorage.getItem("jte-cfg")||"null");if(s){Object.assign(cfg,s);cfg.ideas=new Set(s.ideas||[]);}}catch(e){}
 const saveCfg=()=>{try{localStorage.setItem("jte-cfg",JSON.stringify({...cfg,ideas:[...cfg.ideas]}));}catch(e){}};
 const PACES={go:{name:"Go-go",sub:"No rest days",seq:[1,2,3,4,5,6,7,8,9,10,11]},
@@ -541,6 +652,8 @@ function costOf(c,days){
   L.push(["Bullet trains & transit",1000,1200]);
   if(ideas.length)L.push([`Extras: ${ideas.map(i=>i.title.split(" (")[0]).join(", ")}`,ideas.reduce((a,i)=>a+i.lo,0),ideas.reduce((a,i)=>a+i.hi,0)]);
   L.push([`Food, Pokémon & souvenirs, ${trip.length} days`,trip.length*273,trip.length*318]);
+  const sf=(SEASONS[c.season]||SEASONS.summer).f;
+  L.forEach(r=>{const k=/^Flights|^Tokyo → Singapore/.test(r[0])?"fly":/^Singapore hotel/.test(r[0])?null:/night|ryokan/i.test(r[0])?"hotel":/^Disney (tickets|Premier)/.test(r[0])?"dis":null;if(k){r[1]*=sf[k];r[2]*=sf[k];}});
   const lo=L.reduce((a,r)=>a+r[1],0),hi=L.reduce((a,r)=>a+r[2],0);
   return{L,lo,hi,mid:(lo+hi)/2,days:trip.length,rest:trip.filter(d=>d.rest).length,n};
 }
@@ -798,7 +911,7 @@ function updateCost(){
   const c=costOf(cfg,DAYS),target=c.mid,from=shown||target,t0=performance.now();
   const pill=$("cost");pill.classList.toggle("over",c.mid>32000);
   $("sub").textContent=`5 travelers · ${c.days} days · Tokyo → Fuji → Nagoya → Singapore`;
-  $("costdays").textContent=`${c.days} days${c.rest?` · ${c.rest} rest`:""}`;
+  $("costdays").textContent=`${c.days} days${c.rest?` · ${c.rest} rest`:""} · ${SEASONS[cfg.season].icon} ${SEASONS[cfg.season].name}`;
   cancelAnimationFrame(costAnim);
   const step=now=>{const k=Math.min(1,(now-t0)/600),v=from+(target-from)*(1-Math.pow(1-k,3));shown=v;$("costval").textContent="≈ "+k1(v);if(k<1)costAnim=requestAnimationFrame(step);};
   costAnim=requestAnimationFrame(step);
@@ -823,7 +936,7 @@ function renderCard(){
     <button class="link" type="button" data-tab="plan">Change the plan and see costs →</button>`;return;}
   card.innerHTML=`<div class="kicker"><span class="where${d.rest?" restw":""}">${esc(d.where)}${d.rest?" · rest":""}</span>Day ${day} of ${last}</div><h2>${esc(d.t)}</h2>${strip([...new Set(d.legs.flatMap(l=>[l[0],l[1]]))])}
   <ul class="steps">${d.steps.map(s=>`<li><span class="ic">${s[0]}</span><p><b>${esc(s[1])}</b>${fill(s[2])}</p></li>`).join("")}</ul>
-  ${tonightHTML(d)}
+  ${tonightHTML(d)}${wxLine(d)}
   ${d.rides?`<div class="ride">${d.rides.map(r=>`<div><span>🎢 ${esc(r[0])}</span><small>${esc(r[1])}</small></div>`).join("")}</div>`:""}
   ${d.tips?`<div class="tips">${d.tips.map(t=>`<span class="tip">📌 ${esc(t)}</span>`).join("")}</div>`:""}`;
 }
@@ -849,7 +962,7 @@ function renderPlan(c){
   $("ideas").innerHTML=IDEAS.map(i=>{const on=cfg.ideas.has(i.id);return`<article class="idea${on?" on":""}"><div class="ih"><h4>${esc(i.title)}</h4><span class="fit">${esc(i.fit)}</span></div>
    <div class="iw">${esc(i.where)} · about ${fmt(i.lo)}–${fmt(i.hi).slice(1)} for 5</div><p>${esc(i.why)}</p><div class="if"><span class="tip">📌 ${esc(i.tip)}</span>
    <button type="button" class="add" data-idea="${i.id}" aria-pressed="${on}">${on?"✓ In the trip":"＋ Add to trip"}</button></div></article>`;}).join("");
-  renderDisney();
+  renderDisney();renderWhen();
 }
 function rebuild(keepKey){
   const cur=DAYS[day]&&DAYS[day].t;applyHotel();DAYS=build(cfg);makeDots();saveCfg();
@@ -863,7 +976,7 @@ document.addEventListener("click",e=>{
     else if(k==="hotel")cfg.hotel=v;
     else if(k==="nagoya"){cfg.nagoya=v==="1";if(!cfg.nagoya)cfg.ideas.delete("nagoya");}
     else if(k==="sg")cfg.sg=+v;
-    else if(k==="dhotel")cfg.dhotel=v;else if(k==="dnights")cfg.dnights=+v;else if(k==="pa")cfg.pa=v;
+    else if(k==="dhotel")cfg.dhotel=v;else if(k==="dnights")cfg.dnights=+v;else if(k==="pa")cfg.pa=v;else if(k==="season")cfg.season=v;
     rebuild();return;}
   const a=e.target.closest("[data-idea]");
   if(a){const id=a.dataset.idea;cfg.ideas.has(id)?cfg.ideas.delete(id):cfg.ideas.add(id);rebuild();return;}
@@ -871,7 +984,7 @@ document.addEventListener("click",e=>{
   const gd=e.target.closest("[data-guide]");if(gd){openGuide(gd.dataset.guide);return;}
   if(e.target.id==="guide"||e.target.closest(".gclose"))closeGuide();
 });
-function showTab(n){["days","plan","disney","ideas"].forEach(k=>{$("v-"+k).hidden=k!==n;$("t-"+k).setAttribute("aria-selected",k===n);});
+function showTab(n){["days","plan","when","disney","ideas"].forEach(k=>{$("v-"+k).hidden=k!==n;$("t-"+k).setAttribute("aria-selected",k===n);});
   if(n!=="days")$("v-"+n).scrollTop=0;}
 $("cost").onclick=()=>{if(document.querySelector(".app").classList.contains("focus"))$("fs").click();showTab("plan");};
 makeDots();
@@ -1119,7 +1232,7 @@ function tripContext(){
   const days=DAYS.slice(1).map((d,i)=>`Day ${i+1} (${d.where}${d.rest?", rest day":""}): ${d.t}. ${d.steps.map(s=>s[1]+": "+s[2].replace("{hotel}",HOTELS[cfg.hotel].name).replace("{rooms}","")).join(" ")} Tonight: ${tonightName(d)}.`).join("\n");
   const ideas=IDEAS.map(i=>`${i.title} (${i.where}; ${i.fit}; about $${i.lo}-${i.hi} for 5)${cfg.ideas.has(i.id)?" [IN THE TRIP]":""}`).join("; ");
   return`TRIP PLAN (family of 5: 2 adults, 3 kids including a 10-year-old roller-coaster fan; flying Premium Economy from Southern California).
-Pace: ${PACES[cfg.pace].name}. Tokyo hotel: ${HOTELS[cfg.hotel].name}. Disney hotel: ${DHOTELS[cfg.dhotel].name}. Disney paid line skips: ${PA[cfg.pa].name}.
+Season: ${SEASONS[cfg.season].name} (${SEASONS[cfg.season].dates}). Pace: ${PACES[cfg.pace].name}. Tokyo hotel: ${HOTELS[cfg.hotel].name}. Disney hotel: ${DHOTELS[cfg.dhotel].name}. Disney paid line skips: ${PA[cfg.pa].name}.
 Estimated total: $${Math.round(c.lo)}-$${Math.round(c.hi)} (budget $30-32k).
 ${days}
 Optional ideas: ${ideas}
