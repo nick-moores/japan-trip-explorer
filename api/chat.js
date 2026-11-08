@@ -47,6 +47,7 @@ export default {
       return json({ error: "Bad request" }, 400);
     }
     if (code && body.code !== code) return json({ code: "need_code", error: "Family code needed." }, 401);
+    if (body.check) return json({ ok: true });
 
     const msgs = Array.isArray(body.messages) ? body.messages.slice(-8) : [];
     const clean = msgs

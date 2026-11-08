@@ -1391,7 +1391,6 @@ function chatAdd(role,text){const el=document.createElement("div");el.className=
 function fmtMsg(t){return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^[-•] (.*)$/gm,"<span class='li'>• $1</span>").replace(/\n/g,"<br>");}
 async function ask(q){
   q=q.trim();if(!q||CHAT.busy||!CHAT.sample)return;
-  if(CHAT.awaitCode){CHAT.awaitCode=false;saveCode(q);$("chatq").value="";$("chatq").type="text";chatAdd("bot","Thanks! Now ask me again.");if(CHAT.lastQ){const lq=CHAT.lastQ;CHAT.lastQ=null;return ask(lq);}return;}
   CHAT.busy=true;$("chatq").value="";$("chatsend").disabled=true;$("chatsugs").hidden=true;
   chatAdd("me",q);const out=chatAdd("bot","Thinking…");
   const instr="You are a friendly, concise trip helper inside a family's Japan Trip Explorer. Answer from the plan below; when it's silent, give practical, kid-aware advice and say it's a suggestion. Keep answers under 120 words, plain text, short lines or '- ' bullets. Prices are estimates. If they ask to change the plan, say which tab or button does it (Plan, Disney, Ideas tabs, or the 'Tonight' switch on the day card).\n\n"+tripContext();
@@ -1401,18 +1400,30 @@ async function ask(q){
     const r=await CHAT.sample(msgs,{cache:false,modelTier:"quick",signal:CHAT.ctl.signal,onText:({text})=>{out.innerHTML=fmtMsg(text);$("chatlog").scrollTop=1e9;}});
     out.innerHTML=fmtMsg(r.text);CHAT.hist.push({role:"user",content:q},{role:"assistant",content:r.text});
   }catch(e){
-    if(e&&e.code==="need_code"){out.textContent="This chat needs the family code. Type it below and press Send.";CHAT.awaitCode=true;CHAT.lastQ=q;$("chatq").type="password";CHAT.busy=false;$("chatsend").disabled=false;$("chatq").focus();return;}
+    if(e&&e.code==="need_code"){saveCode("");CHAT.pending=q;out.textContent="Please enter the family code first. I'll ask your question right after.";CHAT.busy=false;$("chatsend").disabled=false;lockMode(true);return;}
     if(e&&e.code==="not_granted"){out.textContent="Chat needs permission to ask Claude. Allow it from this page's permissions to use chat.";}
     else if(e&&e.code==="rate_limited"){out.textContent="Too many questions at once. Give it a minute and try again.";}
     else out.textContent=(e&&e.text)||"That didn't go through. Try asking again.";
   }
   CHAT.busy=false;$("chatsend").disabled=false;$("chatq").focus();
 }
-function openChat(on){$("chat").hidden=!on;$("askbtn").setAttribute("aria-expanded",on);if(on){$("chatq").focus();}}
+function lockMode(on){CHAT.locked=on;const q=$("chatq");q.type=on?"password":"text";q.value="";q.placeholder=on?"Family code":"Ask a question…";q.setAttribute("aria-label",on?"Family code":"Your question");
+  $("chatsend").textContent=on?"Unlock":"Send";$("chatsugs").hidden=on||CHAT.hist.length>0;
+  if(on&&!CHAT.lockMsg){CHAT.lockMsg=chatAdd("bot","🔒 Enter the family code to start chatting.");}q.focus();}
+async function unlock(code){
+  code=code.trim();if(!code||CHAT.busy)return;CHAT.busy=true;$("chatsend").disabled=true;
+  let ok=false;try{const r=await fetch("/api/chat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({check:true,code})});ok=r.ok;
+    if(r.status===429){chatAdd("bot","Too many tries. Wait a few minutes and try again.");CHAT.busy=false;$("chatsend").disabled=false;$("chatq").value="";return;}}catch(e){}
+  CHAT.busy=false;$("chatsend").disabled=false;
+  if(!ok){$("chatq").value="";chatAdd("bot","That code didn't match. Try again.");return;}
+  saveCode(code);CHAT.lockMsg=null;lockMode(false);chatAdd("bot","Unlocked! Ask me anything about the trip.");
+  if(CHAT.pending){const p=CHAT.pending;CHAT.pending=null;ask(p);}
+}
+function openChat(on){$("chat").hidden=!on;$("askbtn").setAttribute("aria-expanded",on);if(on){if(CHAT.needsCode&&!loadCode()&&!CHAT.locked)lockMode(true);else $("chatq").focus();}}
 $("askbtn").onclick=()=>openChat($("chat").hidden);
 $("chatx").onclick=()=>openChat(false);
-$("chatform").addEventListener("submit",e=>{e.preventDefault();ask($("chatq").value);});
-$("chatsugs").addEventListener("click",e=>{const b=e.target.closest("button");if(b)ask(b.textContent);});
+$("chatform").addEventListener("submit",e=>{e.preventDefault();if(CHAT.locked)unlock($("chatq").value);else ask($("chatq").value);});
+$("chatsugs").addEventListener("click",e=>{const b=e.target.closest("button");if(b&&!CHAT.locked)ask(b.textContent);});
 
 cam=dayCam(0);startDay(0,true);updateCost();if(!TM)requestAnimationFrame(frame);
 </script>
