@@ -246,6 +246,16 @@ tr.tot td{border:0;padding-top:8px;font-weight:900}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
 .gl,.wl{margin:0;padding-left:20px;display:grid;gap:5px}
 .gl{list-style:"✓  "}.wl{list-style:"⚠️ "}
+.tblwrap{overflow-x:auto;margin:0 -4px;padding:0 4px}
+table.side{min-width:620px;font-size:.8rem;border-collapse:collapse}
+table.side th{text-align:left;font-size:.74rem;padding:4px 6px 6px;vertical-align:bottom;color:var(--muted)}
+table.side td{text-align:left;padding:6px;vertical-align:top;border-bottom:1px dotted var(--line);white-space:normal;font-weight:500}
+table.side td:first-child{font-weight:700;color:var(--muted);width:110px}
+table.side td:last-child{text-align:left;white-space:normal;font-weight:500}
+table.side .me{background:color-mix(in srgb,var(--gold) 28%,transparent);font-weight:700}
+table.side th.me{color:var(--ink)}
+#plan .sel h3{margin:0 0 4px}
+#plan .srow b{text-align:right;max-width:62%}
 .credit{margin:-6px 0 12px;font-size:.7rem;color:var(--muted)}
 </style>
 
@@ -510,6 +520,78 @@ const HOTELS={
  city:{name:"Mitsui Garden Hotel Ginza Premier",short:"Mitsui Garden Ginza",area:"Ginza",lon:139.764,lat:35.668,lo:380,hi:520,rooms:"Two standard rooms side by side.",note:"Solid 4-star in Ginza near Tsukiji. Rooms are small, as most Tokyo rooms are."},
  apt:{name:"a family apartment",short:"Family apartment",area:"Shinjuku",lon:139.703,lat:35.692,lo:220,hi:380,rooms:"One apartment that sleeps five, with a washer.",note:"Cheapest and roomiest, with laundry and a kitchen. No pool, concierge or room service."}
 };
+/* ---------- where to stay: details ---------- */
+HOTELS.mimaru={name:"MIMARU Tokyo (apartment hotel)",short:"Apartment hotel",area:"Hatchobori / Tokyo Station East",lon:139.777,lat:35.676,lo:300,hi:450,
+  rooms:"One apartment-style family room that sleeps five, with a kitchenette.",note:"Apartment-sized family rooms inside a staffed hotel."};
+const STAY={
+ okura:{icon:"🏯",vibe:"Classic Tokyo luxury: big rooms, a pool and spa, a famous breakfast and staff who can arrange anything. You pay a lot for the calm.",
+  facts:{space:"2 large connecting rooms (Heritage Wing rooms run about 60 m²)",laundry:"Hotel laundry service (per item, pricey)",kitchen:"None",breakfast:"Yes, the famous French toast",staff:"24-hour front desk and concierge",clean:"Daily"},
+  mins:{disney:45,shinjuku:25,tokyost:20,ikeb:35,haneda:30},
+  good:["The biggest, quietest rooms in this list; adults and kids each get a room","Indoor 25 m pool and spa: a perfect reset after a park day","Concierge books restaurants and helps with tickets and luggage forwarding","Central: 20 minutes to Tokyo Station, a walk to teamLab Borderless and Tokyo Tower"],
+  watch:["By far the most expensive: about $875–1,060 a night for two rooms","No kitchen or washer; hotel laundry adds up with three kids","Two rooms means splitting the family at night","Quiet, formal atmosphere"],
+  know:["Ask for connecting rooms in writing when booking","Heritage Wing rooms are the largest"]},
+ hilton:{icon:"🎢",vibe:"A Disney-area resort hotel. Disney days are effortless, but every other day starts with a longer ride into the city.",
+  facts:{space:"Family rooms, some with bunk beds; 1–2 rooms",laundry:"Hotel laundry service",kitchen:"None",breakfast:"Yes, big buffet",staff:"24-hour front desk",clean:"Daily"},
+  mins:{disney:5,shinjuku:60,tokyost:30,ikeb:60,haneda:45},
+  good:["Free shuttle to both Disney parks: no trains on your two biggest days","Kid-themed family rooms","Much cheaper than the Okura","Ikspiari mall and Disney shops a short ride away"],
+  watch:["About an hour to Shinjuku (Fuji train) and Ikebukuro (Pokémon Center)","Resort bubble: little Tokyo neighborhood life outside the door","Partner hotel only: no Disney early entry"],
+  know:["Ask for a bunk-bed family room","Pairs well with spending most days near Disney and the bay"]},
+ city:{icon:"🏙️",vibe:"A solid, good-value city hotel in Ginza. Great location and service, but Tokyo hotel rooms are small, so you'll need two.",
+  facts:{space:"2 compact rooms (typical Tokyo rooms are well under 30 m²)",laundry:"Hotel laundry service",kitchen:"None",breakfast:"Yes",staff:"24-hour front desk",clean:"Daily"},
+  mins:{disney:35,shinjuku:30,tokyost:15,ikeb:35,haneda:30},
+  good:["Central: walk to Tsukiji and Ginza, 15 minutes to Tokyo Station","Hotel comforts at about half the Okura's price","Easy breakfasts and a front desk for help"],
+  watch:["Small rooms: suitcases end up on the bed","Two rooms means splitting the family","No kitchen or washer"],
+  know:["Send big suitcases ahead with luggage forwarding","Ask for adjoining rooms on a high floor"]},
+ mimaru:{icon:"🏠",vibe:"The middle ground: an apartment-sized family room with a kitchenette, inside a hotel with a staffed front desk. Built for families and small groups.",
+  facts:{space:"1 family room that sleeps 5 (bunks or extra beds)",laundry:"In-room washer at some locations, coin laundry at others",kitchen:"Kitchenette (microwave, fridge, cookware)",breakfast:"Do it yourself",staff:"Front desk staff",clean:"Varies; check when booking"},
+  mins:{disney:25,shinjuku:25,tokyost:10,ikeb:30,haneda:35},
+  good:["Everyone together in one room, without running a household","Kitchenette for breakfasts, snacks and leftovers","Staff on site if something goes wrong or you need help","Hatchobori and Tokyo Station East are on the Keiyo Line: about 25 minutes straight to Disney and 10 to the bullet train"],
+  watch:["No restaurant, pool or concierge","Laundry differs by location; pick one with an in-room washer","Simpler rooms and compact bathrooms","Less of a treat than a full hotel"],
+  know:["MIMARU has more than a dozen Tokyo locations; family rooms start around $260–400 a night","Hatchobori guests report an in-room washer"]},
+ apt:{icon:"🔑",vibe:"A whole apartment for the five of you, with a living room, washer and kitchen. The most space for the money, but you run the household and there's no front desk.",
+  facts:{space:"Whole flat, often 2 bedrooms plus a living area",laundry:"Washer in the unit (usually)",kitchen:"Full kitchen (usually)",breakfast:"Do it yourself",staff:"Host by message only",clean:"None during your stay"},
+  mins:{disney:55,shinjuku:10,tokyost:25,ikeb:15,haneda:50},
+  good:["Most space for the money: kids can spread out and decompress after park days","Washer in the unit: pack half the clothes","Kitchen for easy breakfasts and konbini or depachika dinners at home","Feels like living in a real Tokyo neighborhood"],
+  watch:["No front desk: self check-in with codes, and problems go through a host by message","Thin walls and strict quiet rules (often after 10 p.m.); excited kids can mean neighbor complaints","Japan's garbage sorting is strict, and there's no daily cleaning","Beds are often futons or sofa beds, and some buildings have no elevator","Cleaning and service fees add roughly $150–300","From Shinjuku, Disney is about 55 minutes each way"],
+  know:["Japan requires vacation rentals to be registered; look for a registration number in the listing","Avoid any host who asks you to tell neighbors you're visiting friends; that's a sign of an unlicensed rental","Filter for an entire place, 2+ bedrooms, a washer and an elevator","Convenience stores can forward your luggage (takkyubin) since there's no front desk"]}
+};
+const DEST=[["disney","Disney parks"],["shinjuku","Shinjuku (Fuji train)"],["tokyost","Tokyo Station (bullet train)"],["ikeb","Ikebukuro (Pokémon Center)"],["haneda","Haneda Airport"]];
+function commuteHours(k){
+  const m=STAY[k].mins;let t=0;
+  DAYS.slice(1).forEach(d=>{const ks=d.legs.flatMap(l=>[l[0],l[1]]);
+    if((ks.includes("tdl")||ks.includes("tds"))&&cfg.dhotel==="none")t+=2*m.disney;
+    if(ks.includes("shinjuku"))t+=2*m.shinjuku;
+    if(ks.includes("tokyost"))t+=m.tokyost*(d.night==="tokyo"?2:1);
+    if(ks.includes("ikeb"))t+=2*m.ikeb;
+    if(ks.includes("hnd"))t+=m.haneda;});
+  return t/60;
+}
+const ORDER=["okura","hilton","city","mimaru","apt"];
+function stayBlock(){
+  const c=costOf(cfg,DAYS),k=cfg.hotel,H=HOTELS[k],X=STAY[k],n=c.n.tokyo;
+  const hrs=ORDER.map(o=>commuteHours(o));
+  return`<h3>Where to stay in Tokyo</h3>
+  <div class="seasons">${ORDER.map((o,i)=>{const h=HOTELS[o],cc=costOf({...cfg,hotel:o},DAYS);return`<button type="button" data-set="hotel" data-val="${o}" class="${o===k?"on":""}" aria-pressed="${o===k}">
+   <span class="sn">${STAY[o].icon} ${esc(h.short)}</span><span class="sd">${esc(h.area)}</span><span class="sw">${fmt(h.lo)}–${fmt(h.hi).slice(1)}/night</span><span class="sc">Trip ${k1(cc.lo)}–${k1(cc.hi).slice(1)}</span></button>`;}).join("")}</div>
+  <div class="sel"><h3>${X.icon} ${esc(H.name.replace(/^a family/,"Family"))} <small>${esc(H.area)}</small></h3><p>${esc(X.vibe)}</p>
+   <div class="srow"><span>Space for five</span><b>${esc(X.facts.space)}</b></div>
+   <div class="srow"><span>Laundry</span><b>${esc(X.facts.laundry)}</b></div>
+   <div class="srow"><span>Kitchen</span><b>${esc(X.facts.kitchen)}</b></div>
+   <div class="srow"><span>Breakfast</span><b>${esc(X.facts.breakfast)}</b></div>
+   <div class="srow"><span>Help on site</span><b>${esc(X.facts.staff)}</b></div>
+   <div class="srow"><span>Tokyo stay, ${n} nights</span><b>${fmt(n*H.lo)}–${fmt(n*H.hi).slice(1)}${k==="apt"?" + fees":""}</b></div>
+   <div class="srow"><span>Travel time on your big days</span><b>about ${hrs[ORDER.indexOf(k)].toFixed(1)} hours</b></div></div>
+  <h3>Why stay here</h3><ul class="gl">${X.good.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
+  <h3>Watch out for</h3><ul class="wl">${X.watch.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
+  <h3>Good to know</h3><div class="tips">${X.know.map(x=>`<span class="tip">📌 ${esc(x)}</span>`).join("")}</div>
+  <h3>Side by side</h3>
+  <div class="tblwrap"><table class="side"><tr><th></th>${ORDER.map(o=>`<th class="${o===k?"me":""}">${STAY[o].icon} ${esc(HOTELS[o].short)}</th>`).join("")}</tr>
+   ${[["Per night",o=>`${fmt(HOTELS[o].lo)}–${fmt(HOTELS[o].hi).slice(1)}`],["Space",o=>STAY[o].facts.space],["Laundry",o=>STAY[o].facts.laundry],["Kitchen",o=>STAY[o].facts.kitchen],["Breakfast",o=>STAY[o].facts.breakfast],["Help on site",o=>STAY[o].facts.staff],["Cleaning",o=>STAY[o].facts.clean],
+     ...DEST.map(([d,l])=>[`To ${l}`,o=>`${STAY[o].mins[d]} min`]),["Travel on big days",o=>`${hrs[ORDER.indexOf(o)].toFixed(1)} h`]]
+     .map(([lab,f])=>`<tr><td>${esc(lab)}</td>${ORDER.map(o=>`<td class="${o===k?"me":""}">${esc(f(o))}</td>`).join("")}</tr>`).join("")}</table></div>
+  <p class="note">Travel times are approximate, door to door by train (taxi to Haneda from central hotels). "Big days" adds up the round trips on your Disney, Fuji, bullet-train, Pokémon Center and airport days for the current plan. Rates other than the Okura's are planning estimates.</p>`;
+}
+
 const NIGHT={nagoya:[220,320],ryokan:[600,950],osaka:[280,420],sg:[225,300]};
 const NIGHTPLACE={disney:"dhotel",tokyo:"okura",nagoya:"nagoyaH",ryokan:"ryokan",osaka:"osakaH",sg:"changi"};
 const REGION={nagoya:"N",nagoyaH:"N",spa:"N",scmaglev:"N",ghibliP:"N",shinosaka:"O",osakaH:"O",usj:"O",fujiq:"F",ryokan:"F",chureito:"F",oshino:"F",changi:"S",gardens:"S",zoo:"S",home:"H",hnd:"T"};
@@ -644,6 +726,7 @@ function costOf(c,days){
   if(n.nagoya)L.push([`Nagoya hotel, ${n.nagoya} night`,n.nagoya*NIGHT.nagoya[0],n.nagoya*NIGHT.nagoya[1]]);
   if(n.osaka)L.push([`Osaka hotel, ${n.osaka} night`,n.osaka*NIGHT.osaka[0],n.osaka*NIGHT.osaka[1]]);
   if(n.ryokan)L.push(["Lakeside ryokan with dinner",n.ryokan*NIGHT.ryokan[0],n.ryokan*NIGHT.ryokan[1]]);
+  if(c.hotel==="apt")L.push(["Apartment cleaning & service fees",150,300]);
   L.push([`Singapore hotel, ${n.sg} night${n.sg>1?"s":""}`,n.sg*NIGHT.sg[0],n.sg*NIGHT.sg[1]]);
   if(n.disney){const D=DHOTELS[c.dhotel];L.push([`${D.short}, ${n.disney} nights`,n.disney*D.lo,n.disney*D.hi]);L.push(["Luggage forwarding",60,100]);}
   L.push(["Disney tickets, 2 days",TIX[0],TIX[1]]);
@@ -947,8 +1030,7 @@ function renderPlan(c){
   $("plan").innerHTML=`
   <h3>Pace</h3>${seg("pace",cmp.map(([k,x])=>[k,PACES[k].name,`${x.days} days · ${x.rest} rest`]),cfg.pace)}
   <p class="note">${PACES[cfg.pace].sub}.</p>
-  <h3>Tokyo hotel</h3>${seg("hotel",Object.entries(HOTELS).map(([k,h])=>[k,h.short,`${fmt(h.lo)}–${fmt(h.hi).slice(1)}/night`]),cfg.hotel)}
-  <p class="note">${esc(HOTELS[cfg.hotel].note)}</p>
+  ${stayBlock()}
   <h3>Nagashima day</h3>${seg("nagoya",[[0,"Day trip","Train back that night"],[1,"Stay in Nagoya","Easier on tired kids"]],cfg.nagoya||cfg.ideas.has("nagoya")?1:0)}
   <h3>Singapore</h3>${seg("sg",[[1,"1 night","Jewel + Gardens"],[2,"2 nights","Adds Singapore Zoo"]],cfg.sg)}
   <div class="locked">✈️ Premium Economy across the Pacific (locked in)</div>
@@ -1008,7 +1090,7 @@ cv.addEventListener("pointerup",e=>{if(sx!==null&&Math.abs(e.clientX-sx)>40)go(d
 
 /* ---------- real map + photos (website version only) ---------- */
 function photoKey(k){
-  if(k==="okura")return{okura:"okura",hilton:"hilton",city:"mitsui",apt:null}[cfg.hotel];
+  if(k==="okura")return{okura:"okura",hilton:"hilton",city:"mitsui",mimaru:null,apt:null}[cfg.hotel];
   if(k==="dhotel")return{toystory:"toystoryH",miracosta:"miracosta",ambassador:"ambassador",tdlhotel:"tdlhotel",fantasy:"fantasyH",celebration:"celebration"}[cfg.dhotel]||null;
   return PHOTOS[k]?k:null;
 }
@@ -1182,6 +1264,8 @@ const GUIDE={
  zoo:{do:["Breakfast in the Wild with orangutans","Rainforest KidzWorld water play (bring swimsuits)","River Wonders boat ride next door"],
   eat:[["Ah Meng Restaurant","Local dishes inside the zoo"],["KFC & food court","Easy fallbacks"]],tip:"Go early. It gets hot by noon."}
 };
+GUIDE.mimaru={do:["Ride the Keiyo Line from Hatchobori straight to Maihama for Disney","Walk to Tokyo Station's Character Street and Ramen Street","Nihonbashi and Pokémon Center DX are close by"],
+  eat:[["Tokyo Station Ramen Street","Eight famous ramen shops in one alley"],["Depachika at Daimaru (Tokyo Station)","Bento and sweets to eat in your room"]],tip:"Pick a MIMARU location with an in-room washer."};
 function guideFor(k){if(k==="okura")return GUIDE[cfg.hotel];return GUIDE[k]||null;}
 const OFFICIAL={okura:"https://theokuratokyo.jp/en/",tdl:"https://www.tokyodisneyresort.jp/en/tdl/",tds:"https://www.tokyodisneyresort.jp/en/tds/",dhotel:"https://www.tokyodisneyresort.jp/en/hotel/",
  fujiq:"https://www.fujiq.jp/en/",teamlab:"https://www.teamlab.art/e/planets/",mitaka:"https://www.ghibli-museum.jp/en/",ghibliP:"https://ghibli-park.jp/en/",
