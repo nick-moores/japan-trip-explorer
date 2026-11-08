@@ -54,22 +54,27 @@ export default {
     const context = typeof body.context === "string" ? body.context.slice(0, 60000) : "";
     const system = context ? SYSTEM + "\n\nTHE FAMILY'S CURRENT TRIP PLAN, DAY TIMELINES AND OPEN LOGISTICS:\n" + context : SYSTEM;
 
-    const call = (messages, tools) =>
+    // Thinking off keeps answers fast and leaves the whole token budget for the reply.
+    const call = (messages, opts) =>
       fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "x-api-key": key, "anthropic-version": "2026-10-21", "content-type": "application/json" },
-        body: JSON.stringify({ model: "claude-sonnet-5-5", max_tokens: 1600, system, messages, ...(tools ? { tools } : {}) }),
+        body: JSON.stringify({ model: "claude-sonnet-5-5", max_tokens: 4096, system, messages,
+          ...(opts.tools ? { tools: opts.tools } : {}), ...(opts.noThink ? { thinking: { type: "disabled" } } : {}) }),
       });
     const SEARCH = [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }];
-    let convo = clean, data = {}, blocks = [], tools = SEARCH;
-    for (let turn = 0; turn < 3; turn++) {
-      let r = await call(convo, tools);
+    let convo = clean, data = {}, blocks = [], opts = { tools: SEARCH, noThink: true }, stops = [];
+    for (let turn = 0; turn < 5; turn++) {
+      let r = await call(convo, opts);
       data = await r.json().catch(() => ({}));
-      if (!r.ok && tools && r.status === 400) { tools = null; r = await call(convo, null); data = await r.json().catch(() => ({})); }
+      // If a feature isn't accepted, retry without it: first thinking-off, then search.
+      if (!r.ok && r.status === 400 && opts.noThink) { console.warn("400 with thinking disabled:", JSON.stringify(data.error)); opts = { ...opts, noThink: false }; r = await call(convo, opts); data = await r.json().catch(() => ({})); }
+      if (!r.ok && r.status === 400 && opts.tools) { console.warn("400 with web search:", JSON.stringify(data.error)); opts = { ...opts, tools: null }; r = await call(convo, opts); data = await r.json().catch(() => ({})); }
       if (!r.ok) {
-        console.error("Anthropic API error", r.status, data && data.error);
+        console.error("Anthropic API error", r.status, JSON.stringify(data && data.error));
         return json({ code: "upstream", error: "Claude couldn't answer just now. Try again." }, 502);
       }
+      stops.push(data.stop_reason);
       blocks = blocks.concat(data.content || []);
       if (data.stop_reason !== "pause_turn") break;
       convo = [...convo, { role: "assistant", content: data.content }];
@@ -77,6 +82,12 @@ export default {
     const text = blocks.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
     const seen = new Set(), sources = [];
     blocks.forEach((b) => (b.citations || []).forEach((c) => { if (c.url && !seen.has(c.url)) { seen.add(c.url); sources.push({ url: c.url, title: c.title }); } }));
-    return json({ text: text || "Sorry, I don't have an answer for that.", sources });
+    if (!text) {
+      console.error("Empty answer", JSON.stringify({ stops, types: blocks.map((b) => b.type), usage: data.usage }));
+      const why = stops.includes("max_tokens") ? "the answer ran out of room" : stops.at(-1) === "pause_turn" ? "the web searches took too long" : `stop reason: ${stops.join(", ") || "unknown"}`;
+      return json({ text: `I couldn't finish that answer (${why}). Try asking about one part of the day, like "morning and lunch on Day 9".`, sources });
+    }
+    if (stops.at(-1) === "max_tokens") return json({ text: text + "\n\n(I ran out of room; ask me to continue.)", sources });
+    return json({ text, sources });
   },
 };
