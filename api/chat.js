@@ -48,15 +48,17 @@ export default {
     const msgs = Array.isArray(body.messages) ? body.messages.slice(-8) : [];
     const clean = msgs
       .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
-      .map((m) => ({ role: m.role, content: m.content.slice(0, 14000) }));
+      .map((m) => ({ role: m.role, content: m.content.slice(0, 8000) }));
     if (!clean.length || clean[clean.length - 1].role !== "user") return json({ error: "Bad request" }, 400);
-    if (clean.reduce((n, m) => n + m.content.length, 0) > 30000) return json({ error: "Question too long." }, 413);
+    if (clean.reduce((n, m) => n + m.content.length, 0) > 40000) return json({ error: "Question too long." }, 413);
+    const context = typeof body.context === "string" ? body.context.slice(0, 60000) : "";
+    const system = context ? SYSTEM + "\n\nTHE FAMILY'S CURRENT TRIP PLAN, DAY TIMELINES AND OPEN LOGISTICS:\n" + context : SYSTEM;
 
     const call = (messages, tools) =>
       fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "x-api-key": key, "anthropic-version": "2026-10-21", "content-type": "application/json" },
-        body: JSON.stringify({ model: "claude-sonnet-5-5", max_tokens: 1600, system: SYSTEM, messages, ...(tools ? { tools } : {}) }),
+        body: JSON.stringify({ model: "claude-sonnet-5-5", max_tokens: 1600, system, messages, ...(tools ? { tools } : {}) }),
       });
     const SEARCH = [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }];
     let convo = clean, data = {}, blocks = [], tools = SEARCH;

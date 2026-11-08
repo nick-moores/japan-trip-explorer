@@ -1597,7 +1597,7 @@ function saveCode(c){try{localStorage.setItem("jte-code",c);}catch(e){}}
     const st=await fetch("/api/chat").then(r=>r.ok?r.json():null).catch(()=>null);if(!st||!st.ready)return;
     CHAT.needsCode=st.needsCode;
     CHAT.sample=async(msgs,opts)=>{
-      const r=await fetch("/api/chat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({messages:msgs,code:loadCode()}),signal:opts&&opts.signal});
+      const r=await fetch("/api/chat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({messages:(opts&&opts.plain)||msgs,context:opts&&opts.context,code:loadCode()}),signal:opts&&opts.signal});
       const j=await r.json().catch(()=>({}));if(!r.ok)throw{code:j.code||"error",message:j.error,text:j.error};
       return{text:j.text,sources:j.sources||[]};};
     ($("askbtn").hidden=false,document.body.classList.add("has-ask"));return;
@@ -1613,10 +1613,11 @@ async function ask(q){
   CHAT.busy=true;$("chatq").value="";$("chatsend").disabled=true;$("chatsugs").hidden=true;
   chatAdd("me",q);const out=chatAdd("bot","Thinking…");
   const instr="You are a warm, knowledgeable family travel guide for Japan and Singapore, built into this family's Japan Trip Explorer. The trip plan below is context about what they've already chosen, not a limit. Happily explore anything about traveling in Japan or Singapore with kids, including places that aren't in the plan (Kyoto, Osaka, Kanazawa, Hiroshima, Hokkaido, anywhere): what the kids would love, how to get there from their stops and how long it takes, how many days it deserves, rough costs, and where it could fit in their itinerary. Be specific and practical, and tie suggestions back to their plan (for example, which day it could replace or follow). Use short paragraphs or '- ' bullets, plain text, and up to about 250 words. Say when prices or hours are estimates and should be checked. If something is already an option in the app, mention where (Plan, When, Disney or Ideas tabs, or the 'Tonight' switch on a day card). You are also their logistics planner. When they ask about timing, getting somewhere, bags, check-in or meals, lay out an hour-by-hour plan from wake-up to bedtime using the day's timeline estimates below; include breakfast, buffers for five people, where the luggage is, check-in/out times and kid energy. Proactively poke holes: name gaps, risks and assumptions, and suggest concrete fixes. Up to about 350 words for schedules. Only decline requests that have nothing to do with travel, Japan or Singapore.\n\n"+tripContext();
-  const msgs=[...CHAT.hist.slice(-6),{role:"user",content:instr+"\n\nQUESTION: "+q}];
+  const msgs=[...CHAT.hist.slice(-6),{role:"user",content:"QUESTION: "+q+"\n\n(Background for answering follows.)\n"+instr}];
+  const plain=[...CHAT.hist.slice(-6),{role:"user",content:q}];
   CHAT.ctl=new AbortController();
   try{
-    const r=await CHAT.sample(msgs,{cache:false,modelTier:"default",signal:CHAT.ctl.signal,onText:({text})=>{out.innerHTML=fmtMsg(text);$("chatlog").scrollTop=1e9;}});
+    const r=await CHAT.sample(msgs,{...(window.TILES?{plain,context:tripContext()}:{}),cache:false,modelTier:"default",signal:CHAT.ctl.signal,onText:({text})=>{out.innerHTML=fmtMsg(text);$("chatlog").scrollTop=1e9;}});
     out.innerHTML=fmtMsg(r.text)+(r.sources&&r.sources.length?`<span class="srcs">Sources: ${r.sources.slice(0,4).map(x=>`<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title||new URL(x.url).hostname)}</a>`).join(" · ")}</span>`:"");CHAT.hist.push({role:"user",content:q},{role:"assistant",content:r.text});
   }catch(e){
     if(e&&e.code==="need_code"){saveCode("");CHAT.pending=q;out.textContent="Please enter the family code first. I'll ask your question right after.";CHAT.busy=false;$("chatsend").disabled=false;lockMode(true);return;}
