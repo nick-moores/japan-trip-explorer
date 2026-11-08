@@ -312,6 +312,23 @@ ol.book time{font-weight:900;color:var(--torii);font-variant-numeric:tabular-num
 #prep h3{font:400 1rem var(--display);margin:16px 0 8px}#prep h3:first-child{margin-top:0}
 .tabs{flex-wrap:wrap;border-radius:22px}.tabs button{flex:1 0 auto}
 .srcs{display:block;margin-top:6px;font-size:.78rem}.srcs a{color:var(--sky)}
+.dpick{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.dpick label{font-weight:900}
+#depart{border:2px solid var(--ink);border-radius:12px;padding:6px 10px;font:700 1rem var(--body);background:var(--bg);color:var(--ink)}
+.best{margin-top:6px}
+.calwrap{margin-top:12px}
+.calhead,.calgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.calhead span{font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:center}
+.cal{min-height:54px;border-radius:10px;border:2px solid var(--line);background:var(--bg);padding:3px 5px;display:grid;align-content:start;gap:1px;font-family:var(--body);color:var(--ink);text-align:left;min-width:0}
+.cal b{font-size:.8rem}.cal span{font-size:.7rem;font-weight:900}.cal i{font-style:normal;font-size:.62rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal.on{cursor:pointer;border-color:var(--ink);background:var(--card)}
+.cal.good{background:color-mix(in srgb,var(--matcha) 28%,var(--card))}
+.cal.meh{background:color-mix(in srgb,var(--gold) 40%,var(--card))}
+.cal.bad{background:color-mix(in srgb,var(--torii) 32%,var(--card))}
+.cal.dev{background:var(--line)}.cal.fly{border-style:dashed;border-color:var(--sky)}
+.cal.home{outline:2px dashed var(--sky);outline-offset:-5px}
+.arr{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px}
+body .arr .poke{display:inline-block}
 .credit{margin:-6px 0 12px;font-size:.7rem;color:var(--muted)}
 </style>
 
@@ -478,6 +495,90 @@ function renderWhen(){
   <h3>Watch out for</h3><ul class="wl">${S.watch.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
   <h3>Only in this season</h3><div class="tips">${S.only.map(x=>`<span class="tip">✨ ${esc(x)}</span>`).join("")}</div>
   <p class="note">Weather: 1991–2020 averages from the Japan Meteorological Agency (Tokyo, Kawaguchiko, Nagoya) and Singapore's climate normals. Costs apply rough seasonal adjustments to flights, hotels and Disney tickets; they're planning estimates, not quotes.</p>`;
+}
+/* ---------- dates & weekdays ---------- */
+const DEVCON=["2027-06-07","2027-06-11"];
+const US_HOL={"2027-06-18":"Juneteenth (observed)","2027-07-05":"Independence Day (observed)","2027-09-06":"Labor Day","2027-11-25":"Thanksgiving","2027-11-26":"Day after Thanksgiving","2027-12-24":"Christmas Eve","2027-12-31":"New Year's Eve (observed)"};
+const JP_HOL={"2027-07-19":"Marine Day","2027-08-11":"Mountain Day","2027-09-20":"Respect for the Aged Day","2027-09-23":"Autumnal Equinox Day","2027-11-03":"Culture Day","2027-11-23":"Labor Thanksgiving Day","2027-12-31":"New Year holidays","2028-01-01":"New Year's Day","2028-01-02":"New Year holidays","2028-01-03":"New Year holidays"};
+const CROWD=new Set(["tdl","tds","fujiq","spa","usj","pokepark","teamlab","kaiyukan","fushimi","arashiyama"]);
+const CLOSED={nintendoM:[2,"Nintendo Museum is closed Tuesdays"],mitaka:[2,"Ghibli Museum is closed Tuesdays"],ghibliP:[2,"Ghibli Park is closed Tuesdays"],railmuseum:[3,"Kyoto Railway Museum is closed Wednesdays"],ueno:[1,"Ueno's science museum is closed Mondays (the park is fine)"]};
+const WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const iso=d=>d.toISOString().slice(0,10);
+const addD=(s,n)=>{const d=new Date(s+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+n);return iso(d);};
+const wday=s=>new Date(s+"T12:00:00Z").getUTCDay();
+const nice=(s,y)=>new Date(s+"T12:00:00Z").toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric",...(y?{year:"numeric"}:{}),timeZone:"UTC"});
+function dayDate(i,dep){dep=dep||cfg.depart;const last=DAYS.length-1;return addD(dep,i>=last?last-1:i);}
+function dayChecks(d,date){
+  const out=[],w=wday(date),wkend=w===0||w===6||JP_HOL[date],ks=[...new Set(d.legs.flatMap(l=>[l[0],l[1]]))];
+  ks.forEach(k=>{
+    if(CROWD.has(k)){if(wkend)out.push({lvl:"bad",k,tx:`${P[k].n} on a ${JP_HOL[date]?"Japanese holiday":WD[w]}: the busiest kind of day.`});else if(w===1||w===5)out.push({lvl:"meh",k,tx:`${P[k].n} on a ${WD[w]}: busier than midweek.`});else out.push({lvl:"good",k,tx:`${P[k].n} midweek: the quietest days.`});}
+    if(CLOSED[k]&&CLOSED[k][0]===w)out.push({lvl:"bad",k,tx:CLOSED[k][1]+"."});
+    if(k==="tsukiji"&&(w===0||w===3||JP_HOL[date]))out.push({lvl:"bad",k,tx:"Tsukiji Outer Market is closed Wednesdays, Sundays and holidays."});
+    if(k==="ginza"&&(w===0||w===6))out.push({lvl:"good",k,tx:"Ginza's main street is car-free on weekend afternoons."});
+  });
+  return out;
+}
+function scoreDepart(dep,days){
+  days=days||DAYS;let s=0,bad=0,good=0;const last=days.length-1;
+  days.forEach((d,i)=>{if(!i||d.final)return;dayChecks(d,addD(dep,i>=last?last-1:i)).forEach(c=>{if(c.lvl==="bad"){s-=3;bad++;}else if(c.lvl==="meh")s-=1;else{s+=1;good++;}});});
+  return{s,bad,good};
+}
+function ptoDays(dep){
+  const ret=dayDate(DAYS.length-1,dep);const hol=[];let n=0;
+  for(let d=dep;d<=ret;d=addD(d,1)){const w=wday(d);if(w===0||w===6)continue;if(US_HOL[d]){hol.push(US_HOL[d]);continue;}n++;}
+  return{n,hol,ret};
+}
+function seasonFor(dep){const m=+dep.slice(5,7),dd=+dep.slice(8,10);
+  if(m===6||(m===7&&dd<15))return"june";if(m===7||m===8)return"summer";if(m===11)return"thanks";if(m===12&&dd>=24)return"newyear";if(m===12)return"xmas";if(m===3||m===4)return"spring";return cfg.season;}
+
+/* day-order optimizer: rearrange the middle Tokyo days so parks land midweek */
+function unitsOf(seq){const out=[];let i=seq.indexOf(1)+1;if(seq[i]==="J")i++;const end=seq.indexOf(9);
+  for(;i<end;i++){if(seq[i]===3&&seq[i+1]===4){out.push("34");i++;}else out.push(String(seq[i]));}return out;}
+function applyOrder(seq,order){
+  if(!order)return[...seq];const u=unitsOf(seq);
+  if(u.slice().sort().join()!==order.slice().sort().join())return[...seq];
+  let i=seq.indexOf(1)+1;if(seq[i]==="J")i++;const head=seq.slice(0,i),tail=seq.slice(seq.indexOf(9));
+  const mid=order.flatMap(x=>x==="34"?[3,4]:x==="R"||x==="J"?[x]:[+x]);return[...head,...mid,...tail];}
+function perms(arr){const out=[],c={};arr.forEach(x=>c[x]=(c[x]||0)+1);const keys=Object.keys(c),cur=[];
+  (function rec(){if(cur.length===arr.length){out.push(cur.slice());return;}for(const k of keys){if(!c[k])continue;c[k]--;cur.push(k);rec();cur.pop();c[k]++;}})();return out;}
+function arrangeDays(){
+  const base=PACES[cfg.pace].seq,units=unitsOf(base),heavy=new Set(["34","5","7"]);
+  const cands=perms(units).map(o=>{let pen=0;for(let i=1;i<o.length;i++){if(heavy.has(o[i])&&heavy.has(o[i-1]))pen+=4;if(o[i]==="R"&&heavy.has(o[i-1]))pen-=1;}if(o[0]!=="2"&&o[0]!=="R")pen+=1;return[o,pen];})
+    .sort((a,b)=>a[1]-b[1]).slice(0,400);
+  let best=null;
+  cands.forEach(([o,pen])=>{const days=build({...cfg,order:o});const sc=scoreDepart(cfg.depart,days);const v=sc.s*1-pen*1.5-sc.bad*2;if(!best||v>best.v)best={o,v,sc};});
+  return best;
+}
+function datesBlock(){
+  const dep=cfg.depart,last=DAYS.length-1,ret=dayDate(last),pto=ptoDays(dep);
+  const cands=[];for(let k=0;k<22;k++){const d=addD("2027-06-12",k);cands.push([d,scoreDepart(d)]);}
+  const best=cands.slice().sort((a,b)=>b[1].s-a[1].s||a[0].localeCompare(b[0])).slice(0,4);
+  const allChecks=DAYS.map((d,i)=>i&&!d.final?[i,d,dayChecks(d,dayDate(i))]:null).filter(Boolean);
+  const issues=allChecks.flatMap(([i,d,cs])=>cs.filter(c=>c.lvl!=="good").map(c=>[i,d,c]));
+  // calendar: from the Sunday of DevCon week (if close) or of departure week
+  const s0=dep<="2027-06-20"?"2027-06-06":addD(dep,-wday(dep)),end=addD(ret,6-wday(ret));
+  const cells=[];for(let d=s0;d<=end;d=addD(d,1))cells.push(d);
+  const idxOf={};DAYS.forEach((d,i)=>{if(i&&!d.final)idxOf[dayDate(i)]=i;});
+  const cell=d=>{const i=idxOf[d],dc=d>=DEVCON[0]&&d<=DEVCON[1],fly=d===dep,home=d===ret;
+    if(i){const cs=dayChecks(DAYS[i],d),lv=cs.some(c=>c.lvl==="bad")?"bad":cs.some(c=>c.lvl==="meh")?"meh":cs.some(c=>c.lvl==="good")?"good":"";
+      return`<button type="button" class="cal on ${lv}${home?" home":""}" data-day="${i}" title="${esc(DAYS[i].t)}"><b>${+d.slice(8)}</b><span>D${i}</span><i>${esc(DAYS[i].where)}</i></button>`;}
+    return`<div class="cal${dc?" dev":""}${fly?" fly":""}"><b>${+d.slice(8)}</b>${dc?"<i>DevCon</i>":fly?"<i>✈️ Fly</i>":US_HOL[d]?"<i>US holiday</i>":""}</div>`;};
+  return`<h3>📆 Dates</h3>
+  <div class="dpick"><label for="depart">Leave Los Angeles</label><input id="depart" type="date" min="2027-06-12" max="2027-12-31" value="${dep}"></div>
+  <div class="seasons best">${best.map(([d,sc])=>`<button type="button" data-set="depart" data-val="${d}" class="${d===dep?"on":""}"><span class="sn">${nice(d)}</span><span class="sd">${sc.bad?`${sc.bad} conflict${sc.bad>1?"s":""}`:"No conflicts"} · ${sc.good} midweek wins</span><span class="sc">${ptoDays(d).n} work days off</span></button>`).join("")}</div>
+  <p class="note">The best departure dates in the three weeks after DevCon, scored on whether parks land midweek and nothing is closed.</p>
+  <div class="sel">
+   <div class="srow"><span>Leave LAX</span><b>${nice(dep,1)}</b></div>
+   <div class="srow"><span>Land in Tokyo</span><b>${nice(addD(dep,1))} (you cross the date line)</b></div>
+   <div class="srow"><span>Fly home from Singapore</span><b>${nice(ret)}, late night</b></div>
+   <div class="srow"><span>Back in Los Angeles</span><b>${nice(ret)}, same evening</b></div>
+   <div class="srow"><span>Work days off</span><b>${pto.n}${pto.hol.length?` (plus ${pto.hol.join(", ")})`:""}</b></div>
+  </div>
+  <div class="calwrap"><div class="calhead">${WD.map(w=>`<span>${w}</span>`).join("")}</div><div class="calgrid">${cells.map(cell).join("")}</div></div>
+  <div class="legend"><span><i style="background:var(--matcha)"></i>Good day for it</span><span><i style="background:var(--gold)"></i>Busier</span><span><i style="background:var(--torii)"></i>Conflict</span><span><i style="background:var(--line)"></i>DevCon</span></div>
+  <div class="arr"><button type="button" class="poke" data-arrange="1">✨ Arrange days around the calendar</button>${cfg.order?`<button type="button" class="link" data-arrange="reset">Reset to the original order</button>`:""}</div>
+  ${issues.length?`<h3>Day-of-week check</h3><ul class="wl">${issues.map(([i,d,c])=>`<li><button type="button" class="link" data-day="${i}">Day ${i}, ${nice(dayDate(i))}</button>: ${esc(c.tx)}</li>`).join("")}</ul><p class="note">Try one of the suggested departure dates, or ask the chat to reorder days around these.</p>`:`<p class="note">✓ Every crowd-sensitive day lands midweek and nothing is closed.</p>`}
+  <p class="note">Rules used: Tokyo Disney and other big parks are quietest Tuesday–Thursday; weekends and Japanese holidays are busiest (June has no Japanese holidays). Closed days: Ghibli Museum, Ghibli Park and the Nintendo Museum on Tuesdays; Tsukiji Outer Market on Wednesdays, Sundays and holidays; Kyoto Railway Museum on Wednesdays; Ueno's science museum on Mondays. Check each site for special closures.</p>`;
 }
 /* ---------- Disney ---------- */
 const YEN=157;
@@ -725,8 +826,8 @@ const IDEAS=[
   why:"An easy day trip to the 13 m Great Buddha you can step inside, then a seaside island with caves, tide pools and the old Enoden train along the beach.",tip:"Go on a weekday to skip crowds"}
 ];
 
-const cfg={pace:"bal",hotel:"okura",nagoya:false,sg:1,dhotel:"none",dnights:2,pa:"must",season:"summer",nstay:"resort",ideas:new Set()};
-try{const s=JSON.parse(localStorage.getItem("jte-cfg")||"null");if(s){Object.assign(cfg,s);if(!s.nstay)cfg.nstay=s.nagoya?"nagoya":"resort";cfg.ideas=new Set(s.ideas||[]);}}catch(e){}
+const cfg={pace:"bal",hotel:"okura",nagoya:false,sg:1,dhotel:"none",dnights:2,pa:"must",season:"june",nstay:"resort",depart:"2027-06-12",ideas:new Set()};
+try{const s=JSON.parse(localStorage.getItem("jte-cfg")||"null");if(s){Object.assign(cfg,s);if(!s.nstay)cfg.nstay=s.nagoya?"nagoya":"resort";if(!s.depart){cfg.depart="2027-06-12";cfg.season="june";}cfg.ideas=new Set(s.ideas||[]);}}catch(e){}
 const saveCfg=()=>{try{localStorage.setItem("jte-cfg",JSON.stringify({...cfg,ideas:[...cfg.ideas]}));}catch(e){}};
 const REST={
  odaiba:{label:"Odaiba seaside",t:"Rest day: Odaiba seaside",legs:[["okura","odaiba","train"]],steps:[["😴","Slow morning","Late breakfast, no schedule."],["🏖️","Beach park","Sand play and the bay breeze at Odaiba Seaside Park (no swimming), plus the giant Unicorn Gundam statue."],["🌉","Evening","Rainbow Bridge lights up at dusk. Early night."]]},
@@ -753,7 +854,7 @@ function transfer(a,b){
   return[...local(a,ha),[ha,hb,"bullet"],...local(hb,b)];
 }
 function build(c){
-  const seq=[...PACES[c.pace].seq];let rIdx=0;
+  const seq=applyOrder(PACES[c.pace].seq,c.order);let rIdx=0;
   const used=new Set(),want=c.rest||[];
   const days=seq.map(k=>{let d;if(k==="R"){const ri=rIdx++;let rk=want[ri]&&REST[want[ri]]&&!used.has(want[ri])?want[ri]:REST_ORDER.find(x=>!used.has(x)&&!want.includes(x))||REST_ORDER.find(x=>!used.has(x));used.add(rk);
     d=clone(REST[rk]);d.where="Tokyo";d.night="tokyo";d.rest=1;d.restIdx=ri;d.restKey=rk;}else{d=clone(BASE[k]);}d.key=k;return d;});
@@ -1106,7 +1207,7 @@ function strip(keys){if(!PHOTOS_ON)return"";const ks=keys.filter(k=>photo(k)&&![
   return`<div class="strip">${ks.map(k=>{const p=photo(k);return`<button type="button" class="ph" data-guide="${k}" aria-label="${esc(P[k].n)}: things to do and where to eat"><img loading="lazy" src="${p.url}" alt=""><span>${esc(P[k].n)}</span><i>Guide</i></button>`;}).join("")}</div><p class="credit">Photos: ${[...new Set(ks.map(k=>photo(k).by))].map(esc).join(", ")} · Wikimedia Commons</p>`;}
 function renderCard(){
   const d=DAYS[day],last=DAYS.length-1,c=costOf(cfg,DAYS);
-  $("badge").textContent=d.overview?"Trip overview":`Day ${day} · ${d.where}`;
+  $("badge").textContent=d.overview?"Trip overview":`Day ${day} · ${d.where} · ${nice(dayDate(day))}`;
   $("mtitle").textContent=d.overview?"Trip overview":`Day ${day}: ${d.t}`;
   document.querySelectorAll(".dot").forEach((b,i)=>b.classList.toggle("on",i===day));
   $("prev").disabled=day===0;$("next").disabled=day===last;
@@ -1119,7 +1220,7 @@ function renderCard(){
     <li><span class="ic">🌴</span><p><b>${sgD} day${sgD>1?"s":""} · Singapore</b>Jewel Changi's indoor waterfall and Gardens by the Bay before flying home.</p></li></ul>
     <div class="ride"><div><span>Estimated cost</span><small>${fmt(c.lo)} – ${fmt(c.hi)}</small></div></div>
     <button class="link" type="button" data-tab="plan">Change the plan and see costs →</button>`;return;}
-  card.innerHTML=`<div class="kicker"><span class="where${d.rest?" restw":""}">${esc(d.where)}${d.rest?" · rest":""}</span>Day ${day} of ${last}</div><h2>${esc(d.t)}</h2>${strip([...new Set(d.legs.flatMap(l=>[l[0],l[1]]))])}
+  card.innerHTML=`<div class="kicker"><span class="where${d.rest?" restw":""}">${esc(d.where)}${d.rest?" · rest":""}</span>Day ${day} of ${last} · ${nice(dayDate(day))}</div><h2>${esc(d.t)}</h2>${strip([...new Set(d.legs.flatMap(l=>[l[0],l[1]]))])}
   <ul class="steps">${d.steps.map(s=>`<li><span class="ic">${s[0]}</span><p><b>${esc(s[1])}</b>${fill(s[2])}</p></li>`).join("")}</ul>
   ${d.rest&&d.restKey?(()=>{const taken=DAYS.filter(x=>x.rest&&x.restKey&&x!==d).map(x=>x.restKey);const alt=REST_ORDER.filter(k=>k!==d.restKey&&!taken.includes(k));return`<div class="explore restswap"><span>Swap for</span>${alt.map(k=>`<button type="button" data-set="rest" data-val="${d.restIdx}:${k}">${esc(REST[k].label)}</button>`).join("")}</div>`;})():""}
   ${tonightHTML(d)}${wxLine(d)}${timelineHTML(d,day)}
@@ -1131,6 +1232,7 @@ function renderPlan(c){
   const cmp=Object.keys(PACES).map(k=>{const cc={...cfg,pace:k},dd=build(cc);return[k,costOf(cc,dd)];});
   const pct=v=>Math.max(0,Math.min(100,(v-20000)/(40000-20000)*100));
   $("plan").innerHTML=`
+  ${datesBlock()}
   <h3>Pace</h3>${seg("pace",cmp.map(([k,x])=>[k,PACES[k].name,`${x.days} days · ${x.rest} rest`]),cfg.pace)}
   <p class="note">${PACES[cfg.pace].sub}.</p>
   ${stayBlock()}
@@ -1160,13 +1262,15 @@ function rebuild(keepKey){
   let i=DAYS.findIndex(d=>d.t===cur);if(i<0)i=Math.min(day,DAYS.length-1);
   startDay(i,true);updateCost();
 }
+document.addEventListener("change",e=>{if(e.target.id==="depart"&&e.target.value){cfg.depart=e.target.value<"2027-06-12"?"2027-06-12":e.target.value;cfg.season=seasonFor(cfg.depart);rebuild();}});
 document.addEventListener("click",e=>{
   const s=e.target.closest("[data-set]");
   if(s){const k=s.dataset.set,v=s.dataset.val;
-    if(k==="pace"){cfg.pace=v;cfg.sg=v==="easy"?2:cfg.sg;}
+    if(k==="pace"){cfg.pace=v;cfg.order=null;cfg.sg=v==="easy"?2:cfg.sg;}
     else if(k==="hotel")cfg.hotel=v;
     else if(k==="nstay")cfg.nstay=v;
     else if(k==="sg")cfg.sg=+v;
+    else if(k==="depart"){cfg.depart=v;cfg.season=seasonFor(v);}
     else if(k==="rest"){const[ri,rk]=v.split(":");const cur=DAYS.filter(x=>x.rest&&x.restKey).sort((a,b)=>a.restIdx-b.restIdx).map(x=>x.restKey);cur[+ri]=rk;cfg.rest=cur;}
     else if(k==="dhotel")cfg.dhotel=v;else if(k==="dnights")cfg.dnights=+v;else if(k==="pa")cfg.pa=v;else if(k==="season")cfg.season=v;
     rebuild();return;}
@@ -1174,6 +1278,7 @@ document.addEventListener("click",e=>{
   if(a){const id=a.dataset.idea;cfg.ideas.has(id)?cfg.ideas.delete(id):cfg.ideas.add(id);rebuild();return;}
   const t=e.target.closest("[data-tab]");if(t)showTab(t.dataset.tab);
   const gd=e.target.closest("[data-guide]");if(gd){openGuide(gd.dataset.guide);return;}
+  const ar=e.target.closest("[data-arrange]");if(ar){if(ar.dataset.arrange==="reset")cfg.order=null;else{const b=arrangeDays();if(b)cfg.order=b.o;}rebuild();showTab("plan");return;}
   const dd=e.target.closest("[data-day]");if(dd){go(+dd.dataset.day);return;}
   const ak=e.target.closest("[data-ask]");if(ak){openChat(true);if(CHAT.locked){CHAT.pending=ak.dataset.ask;}else ask(ak.dataset.ask);return;}
   if(e.target.closest("#howbtn")){openHow();return;}
@@ -1551,7 +1656,7 @@ function prepItems(){
   return L.sort((a,b)=>b[0]-a[0]);
 }
 function renderPrep(){
-  const start=new Date(START27[cfg.season]+"T12:00:00"),S=SEASONS[cfg.season];
+  const start=new Date((cfg.depart||START27[cfg.season])+"T12:00:00"),S=SEASONS[cfg.season];
   const fmtD=n=>{const d=new Date(start.getTime()-n*864e5);return d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});};
   const allGaps=DAYS.map((d,i)=>[i,d,gaps(d,i).filter(g=>!/tickets|lottery|Book|bookings|Buy/.test(g))]).filter(x=>x[2].length);
   $("prep").innerHTML=`<h3>✅ Trip review</h3><p>Use this with your co-planner: the open logistics questions, then what to book and when.</p>
@@ -1580,10 +1685,10 @@ function tonightHTML(d){
 }
 function tripContext(){
   const c=costOf(cfg,DAYS);
-  const days=DAYS.slice(1).map((d,i)=>`Day ${i+1} (${d.where}${d.rest?", rest day":""}): ${d.t}. ${d.steps.map(s=>s[1]+": "+s[2].replace("{hotel}",HOTELS[cfg.hotel].name).replace("{rooms}","")).join(" ")} Tonight: ${tonightName(d)}.${(()=>{const t=timeline(d,i+1);return t?` Timeline estimate: ${t.items.filter(x=>x.t!=null).map(x=>clock(x.t)+' '+x.tx).join('; ')}.`:'';})()}${(()=>{const g=gaps(d,i+1);return g.length?` Open logistics: ${g.join(' ')}`:'';})()}`).join("\n");
+  const days=DAYS.slice(1).map((d,i)=>`Day ${i+1}, ${nice(dayDate(i+1))} (${d.where}${d.rest?", rest day":""}): ${d.t}. ${d.steps.map(s=>s[1]+": "+s[2].replace("{hotel}",HOTELS[cfg.hotel].name).replace("{rooms}","")).join(" ")} Tonight: ${tonightName(d)}.${(()=>{const t=timeline(d,i+1);return t?` Timeline estimate: ${t.items.filter(x=>x.t!=null).map(x=>clock(x.t)+' '+x.tx).join('; ')}.`:'';})()}${(()=>{const g=gaps(d,i+1);return g.length?` Open logistics: ${g.join(' ')}`:'';})()}`).join("\n");
   const ideas=IDEAS.map(i=>`${i.title} (${i.where}; ${i.fit}; about $${i.lo}-${i.hi} for 5)${cfg.ideas.has(i.id)?" [IN THE TRIP]":""}`).join("; ");
   return`TRIP PLAN (family of 5: 2 adults, 3 kids including a 10-year-old roller-coaster fan; flying Premium Economy from Southern California).
-Season: ${SEASONS[cfg.season].name} (${SEASONS[cfg.season].dates}). Pace: ${PACES[cfg.pace].name}. Tokyo hotel: ${HOTELS[cfg.hotel].name}. Disney hotel: ${DHOTELS[cfg.dhotel].name}. Disney paid line skips: ${PA[cfg.pa].name}.
+Departure from LAX: ${nice(cfg.depart,1)} (lands in Tokyo the next day); back in Los Angeles ${nice(dayDate(DAYS.length-1),1)}; ${ptoDays(cfg.depart).n} work days off. DevCon 2027 is the week of June 7, so they leave after it. Season: ${SEASONS[cfg.season].name} (${SEASONS[cfg.season].dates}). Pace: ${PACES[cfg.pace].name}. Tokyo hotel: ${HOTELS[cfg.hotel].name}. Disney hotel: ${DHOTELS[cfg.dhotel].name}. Disney paid line skips: ${PA[cfg.pa].name}.
 Estimated total: $${Math.round(c.lo)}-$${Math.round(c.hi)} (budget $30-32k).
 ${days}
 Optional ideas: ${ideas}
