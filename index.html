@@ -227,6 +227,8 @@ tr.tot td{border:0;padding-top:8px;font-weight:900}
 #chatsend{border:2px solid var(--ink);background:var(--torii);color:#fff;border-radius:999px;padding:8px 14px;font:700 .9rem var(--body);cursor:pointer}
 #chatsend:disabled{opacity:.5}
 .focusing .askbtn,.focusing .chat{display:none}
+body.has-ask .panel{padding-bottom:88px}
+@media not ((orientation:landscape) and (min-width:560px)){body.has-ask .app{padding-bottom:96px}body.has-ask .panel{padding-bottom:0}}
 .wx{margin-top:10px;display:flex;gap:8px;align-items:flex-start;font-size:.9rem;color:var(--ink)}
 .wx b{font-weight:700;color:var(--muted)}
 .seasons{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px}
@@ -1401,11 +1403,11 @@ function saveCode(c){try{localStorage.setItem("jte-code",c);}catch(e){}}
       const r=await fetch("/api/chat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({messages:msgs,code:loadCode()}),signal:opts&&opts.signal});
       const j=await r.json().catch(()=>({}));if(!r.ok)throw{code:j.code||"error",message:j.error,text:j.error};
       return{text:j.text};};
-    $("askbtn").hidden=false;return;
+    ($("askbtn").hidden=false,document.body.classList.add("has-ask"));return;
   }
   if(!window.claude||!window.claude.use)return;
   const s=await window.claude.use("sample");if(!s)return;CHAT.sample=s;
-  $("askbtn").hidden=false;
+  ($("askbtn").hidden=false,document.body.classList.add("has-ask"));
 }catch(e){}})();
 function chatAdd(role,text){const el=document.createElement("div");el.className="msg "+role;el.innerHTML=fmtMsg(text);$("chatlog").appendChild(el);$("chatlog").scrollTop=1e9;return el;}
 function fmtMsg(t){return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^[-•] (.*)$/gm,"<span class='li'>• $1</span>").replace(/\n/g,"<br>");}
