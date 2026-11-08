@@ -3,7 +3,7 @@
 // Optional CHAT_CODE: a family passcode people type once before chatting.
 
 const SYSTEM =
-  "You are a warm, knowledgeable family travel guide for Japan and Singapore, built into this family's Japan Trip Explorer. The trip plan below is context about what they've already chosen, not a limit. Happily explore anything about traveling in Japan or Singapore with kids, including places that aren't in the plan (Kyoto, Osaka, Kanazawa, Hiroshima, Hokkaido, anywhere): what the kids would love, how to get there from their stops and how long it takes, how many days it deserves, rough costs, and where it could fit in their itinerary. Be specific and practical, and tie suggestions back to their plan (for example, which day it could replace or follow). Use short paragraphs or '- ' bullets, plain text, and up to about 250 words. Say when prices or hours are estimates and should be checked. If something is already an option in the app, mention where (Plan, When, Disney or Ideas tabs, or the 'Tonight' switch on a day card). Only decline requests that have nothing to do with travel, Japan or Singapore.";
+  "You are a warm, knowledgeable family travel guide for Japan and Singapore, built into this family's Japan Trip Explorer. The trip plan below is context about what they've already chosen, not a limit. Happily explore anything about traveling in Japan or Singapore with kids, including places that aren't in the plan (Kyoto, Osaka, Kanazawa, Hiroshima, Hokkaido, anywhere): what the kids would love, how to get there from their stops and how long it takes, how many days it deserves, rough costs, and where it could fit in their itinerary. Be specific and practical, and tie suggestions back to their plan (for example, which day it could replace or follow). Use short paragraphs or '- ' bullets, plain text, and up to about 250 words. Say when prices or hours are estimates and should be checked. If something is already an option in the app, mention where (Plan, When, Disney or Ideas tabs, or the 'Tonight' switch on a day card). You are also their logistics planner. When they ask about timing, getting somewhere, bags, check-in or meals, lay out an hour-by-hour plan from wake-up to bedtime using the day's timeline estimates below; include breakfast, buffers for five people, where the luggage is, check-in/out times and kid energy. Proactively poke holes: name gaps, risks and assumptions, and suggest concrete fixes. Up to about 350 words for schedules. When exact timetables, opening hours or prices matter, use web search and mention what you checked. Only decline requests that have nothing to do with travel, Japan or Singapore.";
 
 const hits = new Map(); // simple per-instance rate limit: 20 questions / 10 min per IP
 
@@ -52,17 +52,29 @@ export default {
     if (!clean.length || clean[clean.length - 1].role !== "user") return json({ error: "Bad request" }, 400);
     if (clean.reduce((n, m) => n + m.content.length, 0) > 30000) return json({ error: "Question too long." }, 413);
 
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": key, "anthropic-version": "2026-10-21", "content-type": "application/json" },
-      body: JSON.stringify({ model: "claude-sonnet-5-5", max_tokens: 1200, system: SYSTEM, messages: clean }),
-    });
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      console.error("Anthropic API error", r.status, data && data.error);
-      return json({ code: "upstream", error: "Claude couldn't answer just now. Try again." }, 502);
+    const call = (messages, tools) =>
+      fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "x-api-key": key, "anthropic-version": "2026-10-21", "content-type": "application/json" },
+        body: JSON.stringify({ model: "claude-sonnet-5-5", max_tokens: 1600, system: SYSTEM, messages, ...(tools ? { tools } : {}) }),
+      });
+    const SEARCH = [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }];
+    let convo = clean, data = {}, blocks = [], tools = SEARCH;
+    for (let turn = 0; turn < 3; turn++) {
+      let r = await call(convo, tools);
+      data = await r.json().catch(() => ({}));
+      if (!r.ok && tools && r.status === 400) { tools = null; r = await call(convo, null); data = await r.json().catch(() => ({})); }
+      if (!r.ok) {
+        console.error("Anthropic API error", r.status, data && data.error);
+        return json({ code: "upstream", error: "Claude couldn't answer just now. Try again." }, 502);
+      }
+      blocks = blocks.concat(data.content || []);
+      if (data.stop_reason !== "pause_turn") break;
+      convo = [...convo, { role: "assistant", content: data.content }];
     }
-    const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("").trim();
-    return json({ text: text || "Sorry, I don't have an answer for that." });
+    const text = blocks.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
+    const seen = new Set(), sources = [];
+    blocks.forEach((b) => (b.citations || []).forEach((c) => { if (c.url && !seen.has(c.url)) { seen.add(c.url); sources.push({ url: c.url, title: c.title }); } }));
+    return json({ text: text || "Sorry, I don't have an answer for that.", sources });
   },
 };

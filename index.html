@@ -294,6 +294,24 @@ header .sub{order:2}
 .explore button:hover{background:var(--gold);color:#24304f}
 @media (max-width:480px){.glance div{grid-template-columns:1fr;gap:0}}
 .swaps{display:flex;flex-wrap:wrap;gap:6px}
+.tline{margin-top:12px;border:2px solid var(--line);border-radius:14px;padding:8px 12px;background:var(--bg)}
+.tline summary{cursor:pointer;font-weight:900}.tline summary small{color:var(--muted);font-weight:700;margin-left:6px}
+.tline ol{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px}
+.tline li{display:grid;grid-template-columns:70px 1fr;gap:8px;font-size:.88rem}
+.tline li.sub span{color:var(--muted)}
+.tline time{font-weight:900;font-variant-numeric:tabular-nums;color:var(--torii)}
+.gaps{margin-top:10px;border:2px dashed var(--torii);border-radius:14px;padding:8px 12px}
+.gaps ul{margin:6px 0 0;padding-left:18px;display:grid;gap:4px;font-size:.88rem}
+.poke{margin-top:10px;border:2px solid var(--ink);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 14px;font:700 .88rem var(--body);cursor:pointer}
+.poke:hover{background:var(--gold);color:#24304f}
+body:not(.has-ask) .poke{display:none}
+.pday{margin-bottom:10px}.pday .link{padding:0 0 4px}
+ol.book{list-style:none;padding:0;margin:0;display:grid;gap:6px}
+ol.book li{display:grid;grid-template-columns:110px 1fr;gap:10px;font-size:.9rem;border-bottom:1px dotted var(--line);padding-bottom:5px}
+ol.book time{font-weight:900;color:var(--torii);font-variant-numeric:tabular-nums}
+#prep h3{font:400 1rem var(--display);margin:16px 0 8px}#prep h3:first-child{margin-top:0}
+.tabs{flex-wrap:wrap;border-radius:22px}.tabs button{flex:1 0 auto}
+.srcs{display:block;margin-top:6px;font-size:.78rem}.srcs a{color:var(--sky)}
 .credit{margin:-6px 0 12px;font-size:.7rem;color:var(--muted)}
 </style>
 
@@ -330,6 +348,7 @@ header .sub{order:2}
       <button type="button" role="tab" id="t-when" data-tab="when" aria-selected="false">📅 When</button>
       <button type="button" role="tab" id="t-disney" data-tab="disney" aria-selected="false">🏰 Disney</button>
       <button type="button" role="tab" id="t-ideas" data-tab="ideas" aria-selected="false">✨ Ideas</button>
+      <button type="button" role="tab" id="t-prep" data-tab="prep" aria-selected="false">✅ Prep</button>
     </div>
     <div id="v-days" class="view">
     <div class="nav">
@@ -343,6 +362,7 @@ header .sub{order:2}
     <div id="v-plan" class="view card" hidden><div id="plan"></div></div>
     <div id="v-when" class="view card" hidden><div id="when"></div></div>
     <div id="v-disney" class="view card" hidden><div id="disney"></div></div>
+    <div id="v-prep" class="view card" hidden><div id="prep"></div></div>
     <div id="v-ideas" class="view" hidden><p class="lead">Ideas you might not have on the list yet. Add one and it lands in the right day, with the map, day count and cost updating.</p><div id="ideas" class="ideas"></div></div>
   </div>
 </div>
@@ -719,7 +739,7 @@ function clone(o){return JSON.parse(JSON.stringify(o));}
 function transfer(a,b){
   if(a===b)return[];
   const ra=reg(a),rb=reg(b);
-  const local=(x,y)=>{if(x===y)return[];const m=(/^spa/.test(x)||/^spa/.test(y))?"bus":(reg(x)==="S"?"car":(Math.hypot(P[x].lon-P[y].lon,P[x].lat-P[y].lat)<0.025?"walk":"train"));return[[x,y,m]];};
+  const local=(x,y)=>{if(x===y)return[];const m=(/^spa/.test(x)&&/^spa/.test(y))?"walk":(/^spa/.test(x)||/^spa/.test(y))?"bus":(reg(x)==="S"?"car":(Math.hypot(P[x].lon-P[y].lon,P[x].lat-P[y].lat)<0.025?"walk":"train"));return[[x,y,m]];};
   if(ra===rb)return local(a,b);
   if(ra==="F"||rb==="F"){const t=ra==="F"?a:b,o=ra==="F"?b:a;const legs=[...local(t==="fujiq"?t:t,"fujiq"),["fujiq","shinjuku","train"],...local("shinjuku",o)];
     return ra==="F"?legs:legs.slice().reverse().map(l=>[l[1],l[0],l[2]]);}
@@ -1093,7 +1113,7 @@ function renderCard(){
     <button class="link" type="button" data-tab="plan">Change the plan and see costs →</button>`;return;}
   card.innerHTML=`<div class="kicker"><span class="where${d.rest?" restw":""}">${esc(d.where)}${d.rest?" · rest":""}</span>Day ${day} of ${last}</div><h2>${esc(d.t)}</h2>${strip([...new Set(d.legs.flatMap(l=>[l[0],l[1]]))])}
   <ul class="steps">${d.steps.map(s=>`<li><span class="ic">${s[0]}</span><p><b>${esc(s[1])}</b>${fill(s[2])}</p></li>`).join("")}</ul>
-  ${tonightHTML(d)}${wxLine(d)}
+  ${tonightHTML(d)}${wxLine(d)}${timelineHTML(d,day)}
   ${d.rides?`<div class="ride">${d.rides.map(r=>`<div><span>🎢 ${esc(r[0])}</span><small>${esc(r[1])}</small></div>`).join("")}</div>`:""}
   ${d.tips?`<div class="tips">${d.tips.map(t=>`<span class="tip">📌 ${esc(t)}</span>`).join("")}</div>`:""}`;
 }
@@ -1124,7 +1144,7 @@ function renderPlan(c){
    <div class="kcmp"><div><h4>⛩️ Kyoto</h4><ul><li>Temples, torii gates and bamboo forests</li><li>Monkeys at Arashiyama, deer in nearby Nara</li><li>The Nintendo Museum and a big railway museum</li><li>Lots of walking and some hills</li></ul></div>
    <div><h4>🐙 Osaka</h4><ul><li>Japan's food city: takoyaki, okonomiyaki</li><li>Whale shark aquarium and Pokémon Center Osaka DX</li><li>Super Nintendo World at Universal Studios</li><li>Flatter and easier with tired kids</li></ul></div></div>
    <p class="note"><b>If you add one day:</b> Kyoto's torii gates and monkeys. <b>Two days:</b> add Osaka or Super Nintendo World. <b>For the gamers:</b> Nintendo Museum plus Super Nintendo World.</p></section>`+IDEAS.filter(i=>i.group==="kansai").map(card).join("");
-  renderDisney();renderWhen();
+  renderDisney();renderWhen();renderPrep();
 }
 function rebuild(keepKey){
   const cur=DAYS[day]&&DAYS[day].t;applyHotel();DAYS=build(cfg);makeDots();saveCfg();
@@ -1144,11 +1164,13 @@ document.addEventListener("click",e=>{
   if(a){const id=a.dataset.idea;cfg.ideas.has(id)?cfg.ideas.delete(id):cfg.ideas.add(id);rebuild();return;}
   const t=e.target.closest("[data-tab]");if(t)showTab(t.dataset.tab);
   const gd=e.target.closest("[data-guide]");if(gd){openGuide(gd.dataset.guide);return;}
+  const dd=e.target.closest("[data-day]");if(dd){go(+dd.dataset.day);return;}
+  const ak=e.target.closest("[data-ask]");if(ak){openChat(true);if(CHAT.locked){CHAT.pending=ak.dataset.ask;}else ask(ak.dataset.ask);return;}
   if(e.target.closest("#howbtn")){openHow();return;}
   if(e.target.id==="how"||e.target.closest("#how .gclose")){$("how").hidden=true;return;}
   if(e.target.id==="guide"||e.target.closest(".gclose"))closeGuide();
 });
-function showTab(n){["days","plan","when","disney","ideas"].forEach(k=>{$("v-"+k).hidden=k!==n;$("t-"+k).setAttribute("aria-selected",k===n);});
+function showTab(n){["days","plan","when","disney","ideas","prep"].forEach(k=>{$("v-"+k).hidden=k!==n;$("t-"+k).setAttribute("aria-selected",k===n);});
   if(n!=="days")$("v-"+n).scrollTop=0;}
 $("cost").onclick=()=>{if(document.querySelector(".app").classList.contains("focus"))$("fs").click();showTab("plan");};
 makeDots();
@@ -1423,6 +1445,106 @@ function openGuide(k){
 }
 function closeGuide(){$("guide").hidden=true;}
 
+/* ---------- logistics: timelines, gaps, prep ---------- */
+const hav=(A,B)=>{const R=6371,r=Math.PI/180,dLa=(B.lat-A.lat)*r,dLo=(B.lon-A.lon)*r;const a=Math.sin(dLa/2)**2+Math.cos(A.lat*r)*Math.cos(B.lat*r)*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.sqrt(a));};
+const LEGK={"shinjuku>fujiq":115,"nagoya>spa":50,"nagoya>spaH":50,"spa>spaH":5,"tokyost>nagoya":100,"nagoya>kyotost":35,"kyotost>shinosaka":15,"nagoya>shinosaka":50,"shinosaka>tokyost":150,"home>hnd":690,"hnd>changi":420,"changi>home":930,"fujiq>ryokan":15,"ryokan>chureito":15};
+function legMin(l){const[a,b,m]=l;const k=LEGK[a+">"+b]||LEGK[b+">"+a];if(k)return k;const km=hav(P[a],P[b]);
+  if(m==="plane")return Math.round(km/13)+40;if(m==="bullet")return Math.round(km/3.2)+10;if(m==="walk")return Math.max(5,Math.round(km*15));
+  if(m==="car")return Math.round(12+km*2.2);if(m==="bus")return Math.round(15+km*1.8);return Math.round(12+km*1.7);}
+const PARKS={tdl:{open:"8:15",leave:"20:45",name:"park"},tds:{open:"8:15",leave:"20:45"},fujiq:{open:"9:15",leave:"17:30"},spa:{open:"9:30",leave:"18:00"},usj:{open:"8:30",leave:"20:00"},pokepark:{open:"9:45",leave:"17:00"}};
+const DWELL={teamlab:120,mitaka:150,shibuya:150,ikeb:150,akiba:180,tsukiji:90,nakano:150,ginza:120,nihom:120,tower:90,odaiba:150,yoyogi:120,kamakura:120,enoshima:150,chureito:90,oshino:60,scmaglev:150,ghibliP:180,fushimi:150,arashiyama:180,nintendoM:150,railmuseum:150,nara:210,kaiyukan:150,pcosaka:90,dotonbori:120,gardens:240,zoo:240};
+const HUBS=new Set(["tokyost","shinjuku","nagoya","shinosaka","kyotost","hnd"]);
+const hm=s=>{const[a,b]=s.split(":").map(Number);return a*60+b;};
+const clock=m=>{m=Math.round(m/5)*5;let h=Math.floor(m/60)%24,mm=m%60;const ap=h>=12?"pm":"am";h=h%12||12;return`${h}:${String(mm).padStart(2,"0")} ${ap}`;};
+const MV={plane:"Fly",bullet:"Bullet train",train:"Train",bus:"Bus",car:"Taxi",walk:"Walk"};
+function timeline(d,i){
+  if(d.overview||d.final||!d.legs.length)return null;
+  const items=[];let transit=0;const legs=d.legs;
+  // start time: work back from the first park's target arrival
+  let t=d.rest?600:510,firstPark=legs.findIndex(l=>PARKS[l[1]]);
+  if(firstPark>=0){let before=0;for(let j=0;j<=firstPark;j++){before+=legMin(legs[j])+(j?10:0);if(j<firstPark&&!HUBS.has(legs[j][1])&&DWELL[legs[j][1]])before+=DWELL[legs[j][1]];}t=hm(PARKS[legs[firstPark][1]].open)-before;}
+  const fromHome=legs[0][2]==="plane"&&legs[0][0]==="home";
+  if(fromHome){t=hm("16:00");items.push({t:null,ic:"✈️",tx:"Overnight flight from Los Angeles, about 11–12 hours"});items.push({t,ic:"🛬",tx:"Land at Haneda (typical mid-afternoon arrival; your flight sets this). Immigration and bags take about an hour."});t+=60;}
+  else items.push({t,ic:"🏨",tx:`Leave ${P[legs[0][0]].n}`});
+  let endT=null;
+  legs.forEach((l,j)=>{const[a,b,m]=l;if(j===0&&fromHome)return;if(endT!=null)return;const mins=legMin(l);if(m!=="plane")transit+=mins;
+    if(m==="plane"){if(b==="home"){const dep=Math.max(t+120,hm("22:30"));items.push({t,ic:"💧",tx:"Evening at Jewel Changi: Rain Vortex show, dinner and showers before the flight"});items.push({t:dep-120,ic:"🛂",tx:"Check in and security (allow about 2 hours)"});items.push({t:dep,ic:"✈️",tx:"Overnight flight home, about 15–16 hours (typical late-night departure)"});endT=dep;return;}
+      items.push({t,ic:"🛂",tx:"Check in and security (allow about 2 hours)"});t+=120;}
+    items.push({t,ic:M[m],tx:`${MV[m]} to ${P[b].n} · about ${mins<90?mins+" min":(mins/60).toFixed(1).replace(".0","")+" h"}`,sub:true});
+    t+=mins+(HUBS.has(b)?10:0);
+    if(m==="plane"&&b==="changi"){t-=60;items.push({t,ic:"🕐",tx:"Land in Singapore (clocks go back 1 hour)"});}
+    const pk=PARKS[b];
+    if(pk){items.push({t,ic:"🎢",tx:`Arrive ${P[b].n}`});const lv=Math.max(t+240,hm(pk.leave));items.push({t:lv,ic:"🚪",tx:`Leave ${P[b].n}`});t=lv;}
+    else if(DWELL[b]&&j<legs.length-1){items.push({t,ic:"📍",tx:`${P[b].n} · about ${(DWELL[b]/60).toFixed(1).replace(".0","")} h`});t+=DWELL[b];}
+    else if(!HUBS.has(b)&&j===legs.length-1&&!P[b].hotel&&b!=="home"&&DWELL[b]){items.push({t,ic:"📍",tx:`${P[b].n}`});}
+  });
+  if(endT==null)endT=t;const tn=tonightName(d);
+  if(d.night!=="plane")items.push({t:endT,ic:"🛏️",tx:`At ${tn}`});
+  return{items,end:endT,transit,start:items.find(x=>x.t!=null).t};
+}
+function gaps(d,i){
+  const out=[],tl=timeline(d,i);if(!tl)return out;
+  const prev=DAYS[i-1],ks=d.legs.flatMap(l=>[l[0],l[1]]);
+  const moving=prev&&!prev.overview&&prev.night!==d.night&&!["plane","home"].includes(d.night)&&i>1;
+  if(i===1)out.push("Flight times aren't set yet. Your arrival time drives this whole day, and hotel check-in is usually 3 p.m.");
+  if(moving)out.push(`Hotel change today: check-out is usually 10–11 a.m. and check-in about 3 p.m. Decide where the bags go during the day: the hotel holds them, station coin lockers, or forward them the day before (takkyubin).`);
+  const park=ks.find(k=>PARKS[k]);
+  if(moving&&park)out.push(`You're moving hotels on a ${P[park].n} day. Don't haul suitcases into the park: forward them to tonight's hotel or use big coin lockers at the station.`);
+  if(tl.start<hm("7:30")&&!d.legs.some(l=>l[2]==="plane"&&l[0]==="home"))out.push(`Early start: out the door by about ${clock(tl.start)}. Plan a grab-and-go breakfast (konbini or a station bakery).`);
+  if(tl.transit>=180)out.push(`About ${(tl.transit/60).toFixed(1)} hours on trains and buses today. Pack snacks, charged tablets and a plan for naps.`);
+  if(tl.end>hm("21:30")&&d.night!=="plane")out.push(`Back late, around ${clock(tl.end)}. Consider leaving earlier or staying closer.`);
+  if(d.night==="ryokan")out.push("Bags: bring one overnight bag for the ryokan and leave the big suitcases at the Tokyo hotel (most hotels will hold them). Fuji-Q and Fujisan stations have coin lockers for day bags.");
+  if(d.night==="ryokan")out.push("Ryokan dinners are served at set times, often 6–7 p.m. Leave Fuji-Q by about 5 p.m. and tell the ryokan when you'll arrive.");
+  if(d.night==="sg"&&ks.includes("hnd"))out.push("Flying out this morning: check out of the Tokyo hotel early, and leave about 2.5 hours for Haneda with five people and bags.");
+  if(d.night==="plane")out.push("Late-night flight home after a full day: store bags at the hotel or Changi's luggage storage, and plan showers (Jewel and the terminals have options).");
+  const tix={tdl:"Disney tickets are date-specific; buy them online in advance.",tds:"Disney tickets are date-specific; buy them online in advance.",fujiq:"Buy Zekkyo priority tickets online about a month ahead.",usj:"Buy USJ tickets and an Express Pass in advance.",pokepark:"PokéPark tickets are sold by lottery months ahead.",nintendoM:"Nintendo Museum tickets: lottery entered 3 months ahead.",mitaka:"Ghibli Museum tickets go on sale on the 10th of the prior month.",ghibliP:"Ghibli Park tickets sell out; buy on release day.",nihom:"Pokémon Cafe opens bookings 31 days ahead at 6 p.m. Japan time."};
+  [...new Set(ks)].forEach(k=>{if(tix[k])out.push(tix[k]);});
+  return out;
+}
+function timelineHTML(d,i){
+  const tl=timeline(d,i);if(!tl)return"";const g=gaps(d,i);
+  return`<details class="tline"><summary>🕒 Estimated timeline <small>${clock(tl.start)} – ${clock(tl.end)}</small></summary><ol>${tl.items.map(x=>`<li class="${x.sub?"sub":""}"><time>${x.t==null?"":clock(x.t)}</time><span>${x.ic} ${esc(x.tx)}</span></li>`).join("")}</ol>
+   <p class="note">Rough estimates from distances and typical transit times, with 10-minute buffers at stations. Check real timetables before you book.</p></details>
+   ${g.length?`<div class="gaps"><b>⚠️ Logistics to sort out</b><ul>${g.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`:""}
+   <button type="button" class="poke" data-ask="Poke holes in Day ${i} (${esc(d.t)}). Walk through the timing hour by hour from breakfast to bedtime, where our bags are, meals, kid energy, bookings and anything we've missed. Suggest fixes.">🔍 Poke holes in this day</button>`;
+}
+const START27={june:"2027-06-14",summer:"2027-07-24",xmas:"2027-12-18",newyear:"2027-12-26",thanks:"2027-11-20",spring:"2027-03-27"};
+function prepItems(){
+  const ks=new Set(DAYS.flatMap(d=>d.legs.flatMap(l=>[l[0],l[1]])));const L=[];
+  const add=(daysBefore,txt,on=true)=>{if(on)L.push([daysBefore,txt]);};
+  add(330,"Book Premium Economy flights for 5 seats together (LAX → Tokyo, Singapore → LAX)");
+  add(300,`Book the Tokyo stay: ${HOTELS[cfg.hotel].name.replace(/^a family/,"family")}`);
+  add(300,`Book ${DHOTELS[cfg.dhotel].name} for the Disney nights`,cfg.dhotel!=="none");
+  add(240,"Book Hotel Nagashima (summer weekends fill early)",DAYS.some(d=>d.night==="nagashima"));
+  add(240,"Book hotels in Kyoto / Osaka",DAYS.some(d=>["kyoto","osaka"].includes(d.night)));
+  add(240,"Book the Lake Kawaguchi ryokan",DAYS.some(d=>d.night==="ryokan"));
+  add(120,"Enter the PokéPark Kanto ticket lottery",ks.has("pokepark"));
+  add(95,"Enter the Nintendo Museum ticket lottery (opens in the month 3 months before)",ks.has("nintendoM"));
+  add(75,"Buy Tokyo Disney tickets (date-specific) and download the app");
+  add(60,"Buy Ghibli Park tickets on release",ks.has("ghibliP"));
+  add(60,"Buy USJ tickets and an Express Pass",ks.has("usj"));
+  add(60,"Reserve Fuji Excursion train seats and bullet train seats (SmartEX)");
+  add(31,"Book Pokémon Cafe at 6 p.m. Japan time, exactly 31 days ahead",ks.has("nihom")||ks.has("pcosaka"));
+  add(31,"Buy Fuji-Q Zekkyo priority tickets");
+  add(30,"Buy Gardens by the Bay and Canopy Park tickets");
+  add(25,"Buy Ghibli Museum tickets (on sale the 10th of the prior month)",ks.has("mitaka"));
+  add(14,"Load Suica/PASMO on phones, set up eSIM or pocket Wi-Fi, check passports");
+  return L.sort((a,b)=>b[0]-a[0]);
+}
+function renderPrep(){
+  const start=new Date(START27[cfg.season]+"T12:00:00"),S=SEASONS[cfg.season];
+  const fmtD=n=>{const d=new Date(start.getTime()-n*864e5);return d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});};
+  const allGaps=DAYS.map((d,i)=>[i,d,gaps(d,i).filter(g=>!/tickets|lottery|Book|bookings|Buy/.test(g))]).filter(x=>x[2].length);
+  $("prep").innerHTML=`<h3>✅ Trip review</h3><p>Use this with your co-planner: the open logistics questions, then what to book and when.</p>
+   <div class="sel"><div class="srow"><span>Season</span><b>${S.icon} ${esc(S.name)} (example start ${start.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})})</b></div>
+   <div class="srow"><span>Pace</span><b>${PACES[cfg.pace].name}, ${DAYS.length-1} days</b></div>
+   <div class="srow"><span>Tokyo stay</span><b>${esc(HOTELS[cfg.hotel].short)}</b></div>
+   <div class="srow"><span>Disney stay</span><b>${esc(DHOTELS[cfg.dhotel].short)}</b></div>
+   <div class="srow"><span>Nagashima night</span><b>${{resort:"Hotel Nagashima",nagoya:"Nagoya",trip:"Day trip"}[cfg.nstay||"resort"]}</b></div></div>
+   <h3>Logistics to sort out</h3>${allGaps.length?allGaps.map(([i,d,g])=>`<div class="pday"><button type="button" class="link" data-day="${i}">Day ${i}: ${esc(d.t)} ›</button><ul class="wl">${g.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`).join(""):"<p>Nothing flagged.</p>"}
+   <h3>Booking timeline</h3><ol class="book">${prepItems().map(([n,t])=>`<li><time>${fmtD(n)}</time><span>${esc(t)}</span></li>`).join("")}</ol>
+   <p class="note">Dates count back from an example start date for the selected season; set real dates once flights are booked. Lottery and release rules change, so confirm on each official site.</p>`;
+}
 /* ---------- tonight + trip chat ---------- */
 function tonightName(d){
   return{tokyo:HOTELS[cfg.hotel].name.replace(/^a family/,"Our family"),disney:DHOTELS[cfg.dhotel].name,nagoya:"A hotel by Nagoya Station",ryokan:"A lakeside ryokan at Lake Kawaguchi",
@@ -1439,7 +1561,7 @@ function tonightHTML(d){
 }
 function tripContext(){
   const c=costOf(cfg,DAYS);
-  const days=DAYS.slice(1).map((d,i)=>`Day ${i+1} (${d.where}${d.rest?", rest day":""}): ${d.t}. ${d.steps.map(s=>s[1]+": "+s[2].replace("{hotel}",HOTELS[cfg.hotel].name).replace("{rooms}","")).join(" ")} Tonight: ${tonightName(d)}.`).join("\n");
+  const days=DAYS.slice(1).map((d,i)=>`Day ${i+1} (${d.where}${d.rest?", rest day":""}): ${d.t}. ${d.steps.map(s=>s[1]+": "+s[2].replace("{hotel}",HOTELS[cfg.hotel].name).replace("{rooms}","")).join(" ")} Tonight: ${tonightName(d)}.${(()=>{const t=timeline(d,i+1);return t?` Timeline estimate: ${t.items.filter(x=>x.t!=null).map(x=>clock(x.t)+' '+x.tx).join('; ')}.`:'';})()}${(()=>{const g=gaps(d,i+1);return g.length?` Open logistics: ${g.join(' ')}`:'';})()}`).join("\n");
   const ideas=IDEAS.map(i=>`${i.title} (${i.where}; ${i.fit}; about $${i.lo}-${i.hi} for 5)${cfg.ideas.has(i.id)?" [IN THE TRIP]":""}`).join("; ");
   return`TRIP PLAN (family of 5: 2 adults, 3 kids including a 10-year-old roller-coaster fan; flying Premium Economy from Southern California).
 Season: ${SEASONS[cfg.season].name} (${SEASONS[cfg.season].dates}). Pace: ${PACES[cfg.pace].name}. Tokyo hotel: ${HOTELS[cfg.hotel].name}. Disney hotel: ${DHOTELS[cfg.dhotel].name}. Disney paid line skips: ${PA[cfg.pa].name}.
@@ -1458,7 +1580,7 @@ function saveCode(c){try{localStorage.setItem("jte-code",c);}catch(e){}}
     CHAT.sample=async(msgs,opts)=>{
       const r=await fetch("/api/chat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({messages:msgs,code:loadCode()}),signal:opts&&opts.signal});
       const j=await r.json().catch(()=>({}));if(!r.ok)throw{code:j.code||"error",message:j.error,text:j.error};
-      return{text:j.text};};
+      return{text:j.text,sources:j.sources||[]};};
     ($("askbtn").hidden=false,document.body.classList.add("has-ask"));return;
   }
   if(!window.claude||!window.claude.use)return;
@@ -1471,12 +1593,12 @@ async function ask(q){
   q=q.trim();if(!q||CHAT.busy||!CHAT.sample)return;
   CHAT.busy=true;$("chatq").value="";$("chatsend").disabled=true;$("chatsugs").hidden=true;
   chatAdd("me",q);const out=chatAdd("bot","Thinking…");
-  const instr="You are a warm, knowledgeable family travel guide for Japan and Singapore, built into this family's Japan Trip Explorer. The trip plan below is context about what they've already chosen, not a limit. Happily explore anything about traveling in Japan or Singapore with kids, including places that aren't in the plan (Kyoto, Osaka, Kanazawa, Hiroshima, Hokkaido, anywhere): what the kids would love, how to get there from their stops and how long it takes, how many days it deserves, rough costs, and where it could fit in their itinerary. Be specific and practical, and tie suggestions back to their plan (for example, which day it could replace or follow). Use short paragraphs or '- ' bullets, plain text, and up to about 250 words. Say when prices or hours are estimates and should be checked. If something is already an option in the app, mention where (Plan, When, Disney or Ideas tabs, or the 'Tonight' switch on a day card). Only decline requests that have nothing to do with travel, Japan or Singapore.\n\n"+tripContext();
+  const instr="You are a warm, knowledgeable family travel guide for Japan and Singapore, built into this family's Japan Trip Explorer. The trip plan below is context about what they've already chosen, not a limit. Happily explore anything about traveling in Japan or Singapore with kids, including places that aren't in the plan (Kyoto, Osaka, Kanazawa, Hiroshima, Hokkaido, anywhere): what the kids would love, how to get there from their stops and how long it takes, how many days it deserves, rough costs, and where it could fit in their itinerary. Be specific and practical, and tie suggestions back to their plan (for example, which day it could replace or follow). Use short paragraphs or '- ' bullets, plain text, and up to about 250 words. Say when prices or hours are estimates and should be checked. If something is already an option in the app, mention where (Plan, When, Disney or Ideas tabs, or the 'Tonight' switch on a day card). You are also their logistics planner. When they ask about timing, getting somewhere, bags, check-in or meals, lay out an hour-by-hour plan from wake-up to bedtime using the day's timeline estimates below; include breakfast, buffers for five people, where the luggage is, check-in/out times and kid energy. Proactively poke holes: name gaps, risks and assumptions, and suggest concrete fixes. Up to about 350 words for schedules. Only decline requests that have nothing to do with travel, Japan or Singapore.\n\n"+tripContext();
   const msgs=[...CHAT.hist.slice(-6),{role:"user",content:instr+"\n\nQUESTION: "+q}];
   CHAT.ctl=new AbortController();
   try{
     const r=await CHAT.sample(msgs,{cache:false,modelTier:"default",signal:CHAT.ctl.signal,onText:({text})=>{out.innerHTML=fmtMsg(text);$("chatlog").scrollTop=1e9;}});
-    out.innerHTML=fmtMsg(r.text);CHAT.hist.push({role:"user",content:q},{role:"assistant",content:r.text});
+    out.innerHTML=fmtMsg(r.text)+(r.sources&&r.sources.length?`<span class="srcs">Sources: ${r.sources.slice(0,4).map(x=>`<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title||new URL(x.url).hostname)}</a>`).join(" · ")}</span>`:"");CHAT.hist.push({role:"user",content:q},{role:"assistant",content:r.text});
   }catch(e){
     if(e&&e.code==="need_code"){saveCode("");CHAT.pending=q;out.textContent="Please enter the family code first. I'll ask your question right after.";CHAT.busy=false;$("chatsend").disabled=false;lockMode(true);return;}
     if(e&&e.code==="not_granted"){out.textContent="Chat needs permission to ask Claude. Allow it from this page's permissions to use chat.";}
